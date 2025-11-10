@@ -1,0 +1,58 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Premiere Pro project files and auto-saves
+# (Keep main project files but ignore auto-saves)
+**/Adobe Premiere Pro (Beta) Auto-Save/
+**/Adobe Premiere Pro Auto-Save/
+*.lock
+prproj/
+
+# Large media files
+*.mp4
+*.MP4
+*.mov
+*.avi
+*.mkv
+footage/
+
+# Test/sample Premiere projects (optional - adjust as needed)
+# You may want to keep some sample projects for testing
+pre/*.prproj
+pre/*.prin
+
+# Node modules (if you add npm dependencies)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.swp
+*.swo
+*~
+
+# UXP Developer Tool logs
+*.log
+
+# Build outputs (if you add a build process)
+dist/
+build/
+*.zip
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+.git.bak

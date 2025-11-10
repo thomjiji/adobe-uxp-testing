@@ -1,0 +1,18 @@
+{
+  "name": "uxp-test-2-typescript",
+  "version": "1.0.0",
+  "description": "TypeScript testing environment for Adobe UXP Premiere Pro APIs",
+  "author": "Adobe Inc",
+  "license": "Apache-2.0",
+  "scripts": {
+    "build": "tsc && mkdir -p build-html && cp index.html style.css manifest.json build-html/ && ([ -d icons ] && cp -r icons build-html/ || true)",
+    "watch": "tsc --watch",
+    "clean": "rm -rf build-html",
+    "format": "prettier --write \"**/*.{ts,js,json,html,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,html,css}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}
