@@ -5,7 +5,7 @@
   "author": "Adobe Inc",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "tsc && mkdir -p dist && cp index.html style.css manifest.json dist/ && ([ -d icons ] && cp -r icons dist/ || true)",
+    "build": "tsc && mkdir -p dist && cp src/index.html src/style.css manifest.json dist/ && ([ -d icons ] && cp -r icons dist/ || true)",
     "watch": "tsc --watch",
     "clean": "rm -rf build-html",
     "format": "prettier --write \"**/*.{ts,js,json,html,css}\"",
