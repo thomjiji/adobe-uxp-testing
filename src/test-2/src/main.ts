@@ -264,10 +264,10 @@ async function customTestSequenceInfo() {
 
   try {
     // Example: Get project and sequence
-    const project = await getActiveProjectSafe();
+    const project: Project = await getActiveProjectSafe();
     if (!project) return;
 
-    const sequence = await project.getActiveSequence();
+    const sequence: Sequence = await project.getActiveSequence();
     if (!sequence) {
       logWarning("No active sequence to test with");
       return;
@@ -493,6 +493,7 @@ async function runAllTests() {
     await testProjectInfo();
     await testSequenceInfo();
     await testVideoTrackItems();
+    await customTestSequenceInfo();
     await customTest();
 
     logSection("All Tests Complete");
