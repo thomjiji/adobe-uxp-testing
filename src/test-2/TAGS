@@ -1,0 +1,297 @@
+
+main.js,1901
+const ppro = require("premierepro");ppro15,573
+const fs = require("uxp").storage.localFileSystem;fs16,610
+const log = (msg, color) => {log22,865
+const clearLog = () => {clearLog31,1105
+const logSection = (title) => {logSection38,1242
+const logSuccess = (msg) => log(`- ${msg}`, "#00ff00");logSuccess42,1340
+const logError = (msg) => log(`- ${msg}`, "#ff0000");logError43,1396
+const logWarning = (msg) => log(`- ${msg}`, "#ffaa00");logWarning44,1450
+const logInfo = (msg) => log(`- ${msg}`, "#aaaaaa");logInfo45,1506
+async function getActiveProjectSafe() {getActiveProjectSafe54,1824
+async function getActiveSequenceSafe() {getActiveSequenceSafe71,2237
+async function formatTickTime(tickTime) {formatTickTime90,2733
+async function testProjectInfo() {testProjectInfo107,3252
+async function testSequenceInfo() {testSequenceInfo125,3776
+async function testVideoTrackItems() {testVideoTrackItems150,4698
+async function testTickTime() {testTickTime189,6130
+async function customTestSequenceInfo() {customTestSequenceInfo235,7910
+async function customTest() {customTest264,9079
+function normalizePath(path) {normalizePath311,10860
+async function relinkSourceBinMedia(oldBasePath, newBasePath) {relinkSourceBinMedia322,11347
+        success: 0,success326,11547
+        failed: 0,failed327,11567
+        errors: [],errors328,11586
+    const results = {results325,11525
+        async function processFolder(folder) {processFolder360,12907
+async function runAllTests() {runAllTests432,16443
+async function runCustomTest() {runCustomTest451,17005
+async function metadataGrabber() {metadataGrabber460,17326
+    const runAllBtn = document.querySelector("#run-all-btn");runAllBtn482,18134
+    const runCustomBtn = document.querySelector("#run-custom-btn");runCustomBtn483,18196
+    const clearBtn = document.querySelector("#clear-btn");clearBtn484,18264
+
+types.d.ts,13322
+export declare type premierepro = {premierepro1,0
+export declare type Action = {Action52,1818
+export declare type AddTransitionOptions = {AddTransitionOptions55,1852
+export declare type AppPreferenceStatic = {AppPreferenceStatic67,2714
+export declare type AppPreference = {AppPreference77,3642
+export declare type Application = {Application80,3683
+export declare type AudioClipTrackItemStatic = {AudioClipTrackItemStatic84,3740
+export declare type AudioClipTrackItem = {AudioClipTrackItem92,4079
+export declare type AudioComponentChainStatic = {AudioComponentChainStatic119,6907
+export declare type AudioComponentChain = {AudioComponentChain122,6960
+export declare type AudioFilterComponentStatic = {AudioFilterComponentStatic130,7621
+export declare type AudioFilterComponent = {AudioFilterComponent133,7675
+export declare type AudioFilterFactoryStatic = {AudioFilterFactoryStatic136,7723
+export declare type AudioFilterFactory = {AudioFilterFactory141,8102
+export declare type AudioTrackStatic = {AudioTrackStatic144,8148
+export declare type AudioTrack = {AudioTrack150,8401
+export declare type CaptionTrackStatic = {CaptionTrackStatic160,9065
+export declare type CaptionTrack = {CaptionTrack163,9111
+export declare type ClipProjectItemStatic = {ClipProjectItemStatic173,9754
+export declare type ClipProjectItem = {ClipProjectItem183,10242
+export declare type CloseProjectOptions = {CloseProjectOptions224,14392
+export declare type Color = {Color236,15430
+export declare type Component = {Component245,15943
+export declare type ComponentParam = {ComponentParam252,16516
+export declare type CompoundAction = {CompoundAction272,18865
+export declare type EncoderManagerStatic = {EncoderManagerStatic277,19032
+export declare type EncoderManager = {EncoderManager290,19938
+export declare type ExporterStatic = {ExporterStatic297,20836
+export declare type Exporter = {Exporter301,21112
+export declare type FolderItemStatic = {FolderItemStatic304,21148
+export declare type FolderItem = {FolderItem314,21621
+export declare type FootageInterpretation = {FootageInterpretation329,22834
+export declare type FrameRateStatic = {FrameRateStatic364,25076
+export declare type FrameRate = {FrameRate368,25203
+export declare type GuidStatic = {GuidStatic375,25497
+export declare type Guid = {Guid379,25605
+export declare type IngestSettings = {IngestSettings384,25712
+export declare type KeyframeStatic = {KeyframeStatic389,25928
+export declare type Keyframe = {Keyframe398,26402
+export declare type MarkerStatic = {MarkerStatic405,26785
+export declare type Marker = {Marker412,27045
+export declare type MarkersStatic = {MarkersStatic429,28155
+export declare type Markers = {Markers433,28331
+export declare type Media = {Media440,28763
+export declare type MetadataStatic = {MetadataStatic446,28975
+export declare type Metadata = {Metadata461,30109
+export declare type OpenProjectOptions = {OpenProjectOptions464,30145
+export declare type OperationCompleteEventStatic = {OperationCompleteEventStatic475,31128
+export declare type OperationCompleteEvent = {OperationCompleteEvent487,32035
+export declare type PointF = {PointF491,32182
+export declare type PointKeyframe = {PointKeyframe498,32428
+export declare type ProjectStatic = {ProjectStatic503,32548
+export declare type Project = {Project510,32903
+export declare type ProjectClosedEventStatic = {ProjectClosedEventStatic537,35419
+export declare type ProjectClosedEvent = {ProjectClosedEvent541,35534
+export declare type ProjectColorSettings = {ProjectColorSettings547,35729
+export declare type ProjectEventStatic = {ProjectEventStatic552,35982
+export declare type ProjectEvent = {ProjectEvent558,36243
+export declare type ProjectItemStatic = {ProjectItemStatic565,36473
+export declare type ProjectItem = {ProjectItem575,36977
+export declare type ProjectItemSelection = {ProjectItemSelection586,37597
+export declare type ProjectSettingsStatic = {ProjectSettingsStatic590,37745
+export declare type ProjectSettings = {ProjectSettings597,38293
+export declare type ProjectUtilsStatic = {ProjectUtilsStatic600,38336
+export declare type ProjectUtils = {ProjectUtils607,38792
+export declare type PropertiesStatic = {PropertiesStatic610,38832
+export declare type Properties = {Properties616,39191
+export declare type RectF = {RectF626,40197
+export declare type ScratchDiskSettingsStatic = {ScratchDiskSettingsStatic632,40336
+export declare type ScratchDiskSettings = {ScratchDiskSettings643,40858
+export declare type SequenceStatic = {SequenceStatic648,41263
+export declare type Sequence = {Sequence651,41305
+export declare type SequenceEditorStatic = {SequenceEditorStatic684,44053
+export declare type SequenceEditor = {SequenceEditor689,44312
+export declare type SequenceSettingsStatic = {SequenceSettingsStatic698,45814
+export declare type SequenceSettings = {SequenceSettings725,47273
+export declare type SequenceUtilsStatic = {SequenceUtilsStatic756,49886
+export declare type SequenceUtils = {SequenceUtils763,50272
+export declare type SnapEventStatic = {SnapEventStatic766,50313
+export declare type SnapEvent = {SnapEvent775,51087
+export declare type SourceMonitorStatic = {SourceMonitorStatic778,51124
+export declare type SourceMonitor = {SourceMonitor788,51784
+export declare type TextSegmentsStatic = {TextSegmentsStatic791,51825
+export declare type TextSegments = {TextSegments795,52036
+export declare type TickTimeStatic = {TickTimeStatic798,52076
+export declare type TickTime = {TickTime811,52822
+export declare type TimeDisplay = {TimeDisplay825,54151
+export declare type TrackItemSelectionStatic = {TrackItemSelectionStatic829,54273
+export declare type TrackItemSelection = {TrackItemSelection833,54434
+export declare type TransitionFactoryStatic = {TransitionFactoryStatic839,54863
+export declare type TransitionFactory = {TransitionFactory844,55183
+export declare type UniqueSerializeableStatic = {UniqueSerializeableStatic847,55228
+export declare type UniqueSerializeable = {UniqueSerializeable851,55440
+export declare type UtilsStatic = {UtilsStatic855,55557
+export declare type Utils = {Utils859,55660
+export declare type VideoClipTrackItemStatic = {VideoClipTrackItemStatic862,55693
+export declare type VideoClipTrackItem = {VideoClipTrackItem870,56032
+export declare type VideoComponentChainStatic = {VideoComponentChainStatic899,59172
+export declare type VideoComponentChain = {VideoComponentChain902,59225
+export declare type VideoFilterComponentStatic = {VideoFilterComponentStatic910,59886
+export declare type VideoFilterComponent = {VideoFilterComponent913,59940
+export declare type VideoFilterFactoryStatic = {VideoFilterFactoryStatic916,59988
+export declare type VideoFilterFactory = {VideoFilterFactory922,60347
+export declare type VideoTrackStatic = {VideoTrackStatic925,60393
+export declare type VideoTrack = {VideoTrack931,60646
+export declare type VideoTransitionStatic = {VideoTransitionStatic941,61310
+export declare type VideoTransition = {VideoTransition946,61481
+export declare type EventManagerStatic = {EventManagerStatic949,61524
+export declare type EventManager = {EventManager956,62690
+export declare type TranscriptStatic = {TranscriptStatic959,62730
+export declare type Transcript = {Transcript965,63202
+export namespace Constants {Constants969,63241
+	export enum MediaType {MediaType970,63270
+		ANY,ANY971,63295
+		DATA,DATA972,63302
+		VIDEO,VIDEO973,63310
+		AUDIOAUDIO975,63319
+	export enum ContentType {ContentType977,63331
+		ANY,ANY978,63358
+		SEQUENCE,SEQUENCE979,63365
+		MEDIAMEDIA981,63377
+	export enum ProjectItemColorLabel {ProjectItemColorLabel983,63389
+		VIOLET,VIOLET984,63426
+		IRIS,IRIS985,63436
+		LAVENDER,LAVENDER986,63444
+		CERULEAN,CERULEAN987,63456
+		FOREST,FOREST988,63468
+		ROSE,ROSE989,63478
+		MANGO,MANGO990,63486
+		PURPLE,PURPLE991,63495
+		BLUE,BLUE992,63505
+		TEAL,TEAL993,63513
+		MAGENTA,MAGENTA994,63521
+		TAN,TAN995,63532
+		GREEN,GREEN996,63539
+		BROWN,BROWN997,63548
+		YELLOWYELLOW999,63557
+	export enum TransitionPosition {TransitionPosition1001,63570
+		START,START1002,63604
+		ENDEND1004,63613
+	export enum TrackItemType {TrackItemType1006,63623
+		EMPTY,EMPTY1007,63652
+		CLIP,CLIP1008,63661
+		TRANSITION,TRANSITION1009,63669
+		PREVIEW,PREVIEW1010,63683
+		FEEDBACKFEEDBACK1012,63694
+	export enum ProjectEvent {ProjectEvent1014,63709
+		OPENED,OPENED1015,63737
+		CLOSED,CLOSED1016,63747
+		DIRTY,DIRTY1017,63757
+		ACTIVATED,ACTIVATED1018,63766
+		PROJECT_ITEM_SELECTION_CHANGEDPROJECT_ITEM_SELECTION_CHANGED1020,63779
+	export enum InterpolationMode {InterpolationMode1022,63816
+		BEZIER,BEZIER1023,63849
+		HOLD,HOLD1024,63859
+		LINEAR,LINEAR1025,63867
+		TIME,TIME1026,63877
+		TIME_TRANSITION_END,TIME_TRANSITION_END1027,63885
+		TIME_TRANSITION_STARTTIME_TRANSITION_START1029,63908
+	export enum SequenceOperation {SequenceOperation1031,63936
+		APPLYCUT,APPLYCUT1032,63969
+		CREATEMARKER,CREATEMARKER1033,63981
+		CREATESUBCLIPCREATESUBCLIP1035,63997
+	export enum PropertyType {PropertyType1037,64017
+		PERSISTENT,PERSISTENT1038,64045
+		NON_PERSISTENTNON_PERSISTENT1040,64059
+	export enum SequenceEvent {SequenceEvent1042,64080
+		ACTIVATED,ACTIVATED1043,64109
+		CLOSED,CLOSED1044,64122
+		SELECTION_CHANGEDSELECTION_CHANGED1046,64132
+	export enum VideoTrackEvent {VideoTrackEvent1048,64156
+		TRACK_CHANGED,TRACK_CHANGED1049,64187
+		INFO_CHANGED,INFO_CHANGED1050,64204
+		LOCK_CHANGEDLOCK_CHANGED1052,64220
+	export enum AudioTrackEvent {AudioTrackEvent1054,64239
+		TRACK_CHANGED,TRACK_CHANGED1055,64270
+		INFO_CHANGED,INFO_CHANGED1056,64287
+		LOCK_CHANGEDLOCK_CHANGED1058,64303
+	export enum EncoderEvent {EncoderEvent1060,64322
+		RENDER_COMPLETE,RENDER_COMPLETE1061,64350
+		RENDER_ERROR,RENDER_ERROR1062,64369
+		RENDER_CANCEL,RENDER_CANCEL1063,64385
+		RENDER_QUEUE,RENDER_QUEUE1064,64402
+		RENDER_PROGRESSRENDER_PROGRESS1066,64418
+	export enum ScratchDiskFolderType {ScratchDiskFolderType1068,64440
+		CAPTURE,CAPTURE1069,64477
+		AUDIO_PREVIEW,AUDIO_PREVIEW1070,64488
+		VIDEO_PREVIEW,VIDEO_PREVIEW1071,64505
+		AUTO_SAVE,AUTO_SAVE1072,64522
+		CCL_LIBRARIES,CCL_LIBRARIES1073,64535
+		CAPSULE_MEDIACAPSULE_MEDIA1075,64552
+	export enum ScratchDiskFolder {ScratchDiskFolder1077,64572
+		SAME_AS_PROJECT,SAME_AS_PROJECT1078,64605
+		MY_DOCUMENTSMY_DOCUMENTS1080,64624
+	export enum MetadataType {MetadataType1082,64643
+		INTEGER,INTEGER1083,64671
+		REAL,REAL1084,64682
+		TEXT,TEXT1085,64690
+		BOOLEANBOOLEAN1087,64698
+	export enum ExportType {ExportType1089,64712
+		QUEUE_TO_AME,QUEUE_TO_AME1090,64738
+		QUEUE_TO_APP,QUEUE_TO_APP1091,64754
+		IMMEDIATELYIMMEDIATELY1093,64770
+	export enum PreferenceKey {PreferenceKey1095,64788
+		AUTO_PEAK_GENERATION,AUTO_PEAK_GENERATION1096,64817
+		IMPORT_WORKSPACE,IMPORT_WORKSPACE1097,64841
+		SHOW_QUICKSTART_DIALOGSHOW_QUICKSTART_DIALOG1099,64861
+	export enum SnapEvent {SnapEvent1101,64890
+		KEYFRAME,KEYFRAME1102,64915
+		RAZOR_PLAYHEAD,RAZOR_PLAYHEAD1103,64927
+		RAZOR_MARKER,RAZOR_MARKER1104,64945
+		TRACKITEM,TRACKITEM1105,64961
+		GUIDES,GUIDES1106,64974
+		PLAYHEAD_TRACKITEMPLAYHEAD_TRACKITEM1108,64984
+	export enum OperationCompleteEvent {OperationCompleteEvent1110,65009
+		CLIP_EXTEND_REACHED,CLIP_EXTEND_REACHED1111,65047
+		EFFECT_DROP_COMPLETE,EFFECT_DROP_COMPLETE1112,65070
+		EFFECT_DRAG_OVER,EFFECT_DRAG_OVER1113,65094
+		EXPORT_MEDIA_COMPLETE,EXPORT_MEDIA_COMPLETE1114,65114
+		GENERATIVE_EXTEND_COMPLETE,GENERATIVE_EXTEND_COMPLETE1115,65139
+		IMPORT_MEDIA_COMPLETEIMPORT_MEDIA_COMPLETE1117,65169
+	export enum OperationCompleteState {OperationCompleteState1119,65197
+		SUCCESS,SUCCESS1120,65235
+		CANCELLED,CANCELLED1121,65246
+		FAILEDFAILED1123,65259
+	export enum PixelAspectRatio {PixelAspectRatio1125,65272
+		SQUARE,SQUARE1126,65304
+		DVNTSC,DVNTSC1127,65314
+		DVNTSCWide,DVNTSCWide1128,65324
+		DVPAL,DVPAL1129,65338
+		DVPALWide,DVPALWide1130,65347
+		Anamorphic,Anamorphic1131,65360
+		HDAnamorphic1080,HDAnamorphic10801132,65374
+		DVCProHDDVCProHD1134,65394
+	export enum VideoFieldType {VideoFieldType1136,65409
+		PROGRESSIVE,PROGRESSIVE1137,65439
+		UPPER_FIRST,UPPER_FIRST1138,65454
+		LOWER_FIRSTLOWER_FIRST1140,65469
+	export enum VideoDisplayFormatType {VideoDisplayFormatType1142,65487
+		FPS_23_976,FPS_23_9761143,65525
+		FPS_25,FPS_251144,65539
+		FPS_29_97,FPS_29_971145,65549
+		FPS_29_97_NON_DROP,FPS_29_97_NON_DROP1146,65562
+		FEET_FRAME_16mm,FEET_FRAME_16mm1147,65584
+		FEET_FRAME_35mm,FEET_FRAME_35mm1148,65603
+		FRAMESFRAMES1150,65622
+	export enum AudioChannelType {AudioChannelType1152,65635
+		MONO,MONO1153,65667
+		STEREO,STEREO1154,65675
+		SURROUND_51,SURROUND_511155,65685
+		MULTIMULTI1157,65700
+	export enum AudioDisplayFormatType {AudioDisplayFormatType1159,65712
+		SAMPLE_RATE,SAMPLE_RATE1160,65750
+		MILLISECONDSMILLISECONDS1162,65765
+	export enum MarkerColor {MarkerColor1164,65784
+		GREEN,GREEN1165,65811
+		RED,RED1166,65820
+		MAGNETA,MAGNETA1167,65827
+		ORANGE,ORANGE1168,65838
+		YELLOW,YELLOW1169,65848
+		BLUE,BLUE1170,65858
+		CYANCYAN1172,65866
