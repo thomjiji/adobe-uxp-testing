@@ -1,7 +1,7 @@
 {
   "id": "test-2",
-  "name": "UXP API Tester",
-  "shortname": "uxp-api-tester",
+  "name": "UXP API Playground",
+  "shortname": "uxp-api-playground",
   "version": "1.0.0",
   "main": "index.html",
   "host": [
