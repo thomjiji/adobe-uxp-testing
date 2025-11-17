@@ -236,3 +236,10 @@ Key Pattern:
 2. Check item.type to determine what it is
 3. Cast to specific type to access specialized methods
 4. For clips, use isSequence() to distinguish clips from sequences
+
+```json
+scripts: {
+        // "deploy": "rsync -aviPh --info=progress --out-format='%i %n%L %C' --delete /home/geekshootjack/git/adobe-uxp-testing/src/test-2/ gsj-data-1@100.98.57.101:/cygdrive/c/Users/GSJ-DATA-1/git/adobe-uxp-testing/src/test-2/",
+        // "deploy": "rsync -aviPh --info=progress --out-format='%i %n%L %C' --delete /home/geekshootjack/git/adobe-uxp-testing/src/test-2/ geekshootjack@100.71.185.65:/Users/geekshootjack/git/adobe-uxp-testing/src/test-2/",
+}
+```
