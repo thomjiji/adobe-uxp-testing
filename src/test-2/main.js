@@ -1,5 +1,7 @@
 const ppro = require("premierepro");
-const fs = require("uxp").storage.localFileSystem;
+const { localFileSystem } = require("uxp").storage;
+
+let cachedMediaFiles = [];
 
 const log = (msg, color) => {
     const body = document.getElementById("plugin-body");
@@ -17,10 +19,10 @@ const clearLog = () => {
     }
 };
 
-const logSuccess = (msg) => log(`- ${msg}`, "#00ff00");
-const logError = (msg) => log(`- ${msg}`, "#ff0000");
-const logWarning = (msg) => log(`- ${msg}`, "#ffaa00");
-const logInfo = (msg) => log(`- ${msg}`, "#aaaaaa");
+const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");
+const logError = (msg) => log(`> ${msg}`, "#ff0000");
+const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");
+const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");
 
 async function getActiveProjectSafe() {
     try {
@@ -73,16 +75,43 @@ async function collectMediaFiles(folder) {
     return mediaFiles;
 }
 
+async function saveMediaFilesToTxt() {
+    try {
+        if (!cachedMediaFiles || cachedMediaFiles.length === 0) {
+            logWarning("No media files to export. Run scan first.");
+            return;
+        }
+
+        const file = await localFileSystem.getFileForSaving("project-media.txt", {
+            types: ["txt"]
+        });
+
+        if (!file) {
+            logInfo("Export cancelled");
+            return;
+        }
+
+        const content = cachedMediaFiles.map(item => `${item.name}\t${item.path}`).join('\n');
+        await file.write(content);
+
+        logSuccess(`Saved ${cachedMediaFiles.length} file paths to: ${file.nativePath}`);
+    } catch (error) {
+        logError(`Error saving file: ${error.message}`);
+    }
+}
+
 async function run() {
     try {
         clearLog();
-        log("Starting test...");
+        log("Starting scan...");
 
         const project = await getActiveProjectSafe();
         if (!project) return;
 
         const rootItem = await project.getRootItem();
         const mediaFiles = await collectMediaFiles(rootItem);
+
+        cachedMediaFiles = mediaFiles;
 
         logSuccess(`Found ${mediaFiles.length} media files in project`);
 
@@ -98,9 +127,14 @@ async function run() {
 
 document.addEventListener("DOMContentLoaded", () => {
     const runBtn = document.querySelector("#run-btn");
+    const exportBtn = document.querySelector("#export-btn");
     const clearBtn = document.querySelector("#clear-btn");
+
     if (runBtn) {
         runBtn.addEventListener("click", run);
+    }
+    if (exportBtn) {
+        exportBtn.addEventListener("click", saveMediaFilesToTxt);
     }
     if (clearBtn) {
         clearBtn.addEventListener("click", clearLog);
