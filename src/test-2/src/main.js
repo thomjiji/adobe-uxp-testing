@@ -4,19 +4,19 @@ const { localFileSystem } = require("uxp").storage;
 let cachedMediaFiles = [];
 
 const log = (msg, color) => {
-    const body = document.getElementById("plugin-body");
-    if (body) {
-        body.innerHTML += color
-            ? `<span style='color:${color}'>${msg}</span><br />`
-            : `${msg}<br />`;
-    }
+  const body = document.getElementById("plugin-body");
+  if (body) {
+    body.innerHTML += color
+      ? `<span style='color:${color}'>${msg}</span><br />`
+      : `${msg}<br />`;
+  }
 };
 
 const clearLog = () => {
-    const body = document.getElementById("plugin-body");
-    if (body) {
-        body.innerHTML = "";
-    }
+  const body = document.getElementById("plugin-body");
+  if (body) {
+    body.innerHTML = "";
+  }
 };
 
 const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");
@@ -25,119 +25,122 @@ const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");
 const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");
 
 async function getActiveProjectSafe() {
-    try {
-        const project = await ppro.Project.getActiveProject();
-        if (!project) {
-            logError("No active project found");
-            return null;
-        }
-        return project;
-    } catch (error) {
-        logError(`Error getting active project: ${error}`);
-        return null;
+  try {
+    const project = await ppro.Project.getActiveProject();
+    if (!project) {
+      logError("No active project found");
+      return null;
     }
+    return project;
+  } catch (error) {
+    logError(`Error getting active project: ${error}`);
+    return null;
+  }
 }
 
 async function collectMediaFiles(folder) {
-    const mediaFiles = [];
-    const items = await folder.getItems();
+  const mediaFiles = [];
+  const items = await folder.getItems();
 
-    for (const item of items) {
-        if (item.type !== 2) {
-            // It's a ClipProjectItem (type 1)
-            const clipItem = ppro.ClipProjectItem.cast(item);
-            if (clipItem) {
-                const isSeq = await clipItem.isSequence();
-                if (isSeq) {
-                    logInfo(`Skipping sequence: ${item.name}`);
-                } else {
-                    const path = await clipItem.getMediaFilePath();
-                    if (path) {
-                        mediaFiles.push({
-                            name: item.name,
-                            path: path
-                        });
-                        logInfo(`Found: ${item.name}`);
-                    }
-                }
-            }
+  for (const item of items) {
+    if (item.type !== 2) {
+      // It's a ClipProjectItem (type 1)
+      const clipItem = ppro.ClipProjectItem.cast(item);
+      if (clipItem) {
+        const isSeq = await clipItem.isSequence();
+        if (isSeq) {
+          logInfo(`Skipping sequence: ${item.name}`);
         } else {
-            // It's a bin (type 2), do recursion
-            const subFolder = ppro.FolderItem.cast(item);
-            if (subFolder) {
-                logInfo(`Entering bin: ${item.name}`);
-                const subFiles = await collectMediaFiles(subFolder);
-                mediaFiles.push(...subFiles);
-            }
+          const path = await clipItem.getMediaFilePath();
+          if (path) {
+            mediaFiles.push({
+              name: item.name,
+              path: path,
+            });
+            logInfo(`Found: ${item.name}`);
+          }
         }
+      }
+    } else {
+      // It's a bin (type 2), do recursion
+      const subFolder = ppro.FolderItem.cast(item);
+      if (subFolder) {
+        logInfo(`Entering bin: ${item.name}`);
+        const subFiles = await collectMediaFiles(subFolder);
+        mediaFiles.push(...subFiles);
+      }
     }
+  }
 
-    return mediaFiles;
+  return mediaFiles;
 }
 
 async function saveMediaFilesToTxt() {
-    try {
-        if (!cachedMediaFiles || cachedMediaFiles.length === 0) {
-            logWarning("No media files to export. Run scan first.");
-            return;
-        }
-
-        const file = await localFileSystem.getFileForSaving("project-media.txt", {
-            types: ["txt"]
-        });
-
-        if (!file) {
-            logInfo("Export cancelled");
-            return;
-        }
-
-        const content = cachedMediaFiles.map(item => `${item.name}\t${item.path}`).join('\n');
-        await file.write(content);
-
-        logSuccess(`Saved ${cachedMediaFiles.length} file paths to: ${file.nativePath}`);
-    } catch (error) {
-        logError(`Error saving file: ${error.message}`);
+  try {
+    if (!cachedMediaFiles || cachedMediaFiles.length === 0) {
+      logWarning("No media files to export. Run scan first.");
+      return;
     }
+
+    const file = await localFileSystem.getFileForSaving("project-media", {
+      types: ["txt"],
+    });
+
+    if (!file) {
+      logInfo("Export cancelled");
+      return;
+    }
+
+    const content = cachedMediaFiles
+      .map((item) => `${item.name}\t${item.path}`)
+      .join("\n");
+    await file.write(content);
+
+    logSuccess(
+      `Saved ${cachedMediaFiles.length} file paths to: ${file.nativePath}`,
+    );
+  } catch (error) {
+    logError(`Error saving file: ${error.message}`);
+  }
 }
 
 async function run() {
-    try {
-        clearLog();
-        log("Starting scan...");
+  try {
+    clearLog();
+    log("Starting scan...");
 
-        const project = await getActiveProjectSafe();
-        if (!project) return;
+    const project = await getActiveProjectSafe();
+    if (!project) return;
 
-        const rootItem = await project.getRootItem();
-        const mediaFiles = await collectMediaFiles(rootItem);
+    const rootItem = await project.getRootItem();
+    const mediaFiles = await collectMediaFiles(rootItem);
 
-        cachedMediaFiles = mediaFiles;
+    cachedMediaFiles = mediaFiles;
 
-        logSuccess(`Found ${mediaFiles.length} media files in project`);
+    logSuccess(`Found ${mediaFiles.length} media files in project`);
 
-        // Print results
-        for (const file of mediaFiles) {
-            log(`${file.name}: ${file.path}`);
-        }
-
-    } catch (error) {
-        logError(`Error: ${error.message}`);
+    // Print results
+    for (const file of mediaFiles) {
+      log(`${file.name}: ${file.path}`);
     }
+  } catch (error) {
+    logError(`Error: ${error.message}`);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    const runBtn = document.querySelector("#run-btn");
-    const exportBtn = document.querySelector("#export-btn");
-    const clearBtn = document.querySelector("#clear-btn");
+  const runBtn = document.querySelector("#run-btn");
+  const exportBtn = document.querySelector("#export-btn");
+  const clearBtn = document.querySelector("#clear-btn");
 
-    if (runBtn) {
-        runBtn.addEventListener("click", run);
-    }
-    if (exportBtn) {
-        exportBtn.addEventListener("click", saveMediaFilesToTxt);
-    }
-    if (clearBtn) {
-        clearBtn.addEventListener("click", clearLog);
-    }
-    log("\n");
+  if (runBtn) {
+    runBtn.addEventListener("click", run);
+  }
+  if (exportBtn) {
+    exportBtn.addEventListener("click", saveMediaFilesToTxt);
+  }
+  if (clearBtn) {
+    clearBtn.addEventListener("click", clearLog);
+  }
+  log("\n");
 });

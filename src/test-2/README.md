@@ -247,3 +247,5 @@ scripts: {
 rootItem is of type 3
 ProjectItem > ClipProjectItem is of type 1
 type 2 is bin
+
+Close project: C-S-W

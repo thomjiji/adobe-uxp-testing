@@ -1,5 +1,30 @@
 
-types.d.ts,13322
+src/main.js,1484
+const ppro = require("premierepro");ppro1,0
+const localFileSystem = require("uxp").storage;localFileSystem2,37
+let cachedMediaFiles = [];cachedMediaFiles4,86
+const log = (msg, color) => {log6,114
+    const body = document.getElementById("plugin-body");body7,144
+const clearLog = () => {clearLog15,354
+    const body = document.getElementById("plugin-body");body16,379
+const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");logSuccess22,491
+const logError = (msg) => log(`> ${msg}`, "#ff0000");logError23,547
+const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");logWarning24,601
+const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");logInfo25,657
+async function getActiveProjectSafe() {getActiveProjectSafe27,711
+async function collectMediaFiles(folder) {collectMediaFiles41,1068
+                        mediaFiles.push({anonymousObjectbd73110c010556,1659
+                            name: item.name,name57,1701
+                            path: pathpath58,1746
+async function saveMediaFilesToTxt() {saveMediaFilesToTxt78,2303
+        const file = await localFileSystem.getFileForSaving("project-media.txt", {anonymousObjectbd73110c020585,2518
+            types: ["txt"]types86,2601
+async function run() {run103,3043
+    const runBtn = document.querySelector("#run-btn");runBtn129,3700
+    const exportBtn = document.querySelector("#export-btn");exportBtn130,3755
+    const clearBtn = document.querySelector("#clear-btn");clearBtn131,3816
+
+src/types.d.ts,13322
 export declare type premierepro = {premierepro1,0
 export declare type Action = {Action52,1818
 export declare type AddTransitionOptions = {AddTransitionOptions55,1852
@@ -262,27 +287,3 @@ export namespace Constants {Constants969,63241
 		YELLOW,YELLOW1169,65848
 		BLUE,BLUE1170,65858
 		CYANCYAN1172,65866
-
-main.js,1415
-const ppro = require("premierepro");ppro1,0
-let cachedMediaFiles = [];cachedMediaFiles4,90
-const log = (msg, color) => {log6,118
-    const body = document.getElementById("plugin-body");body7,148
-const clearLog = () => {clearLog15,358
-    const body = document.getElementById("plugin-body");body16,383
-const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");logSuccess22,495
-const logError = (msg) => log(`> ${msg}`, "#ff0000");logError23,551
-const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");logWarning24,605
-const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");logInfo25,661
-async function getActiveProjectSafe() {getActiveProjectSafe27,715
-async function collectMediaFiles(folder) {collectMediaFiles41,1072
-                        mediaFiles.push({anonymousObjectf10861b2010556,1663
-                            name: item.name,name57,1705
-                            path: pathpath58,1750
-async function saveMediaFilesToTxt() {saveMediaFilesToTxt78,2307
-        const file = await localFileSystem.getFileForSaving("project-media.txt", {anonymousObjectf10861b2020585,2522
-            types: ["txt"]types86,2605
-async function run() {run103,3047
-    const runBtn = document.querySelector("#run-btn");runBtn129,3704
-    const exportBtn = document.querySelector("#export-btn");exportBtn130,3759
-    const clearBtn = document.querySelector("#clear-btn");clearBtn131,3820
