@@ -3,7 +3,7 @@
   "name": "UXP API Playground",
   "shortname": "uxp-api-playground",
   "version": "1.0.0",
-  "main": "index.html",
+  "main": "src/index.html",
   "host": [
     {
       "app": "premierepro",

@@ -1,37 +1,4 @@
 
-main.js,1901
-const ppro = require("premierepro");ppro15,573
-const fs = require("uxp").storage.localFileSystem;fs16,610
-const log = (msg, color) => {log22,865
-const clearLog = () => {clearLog31,1105
-const logSection = (title) => {logSection38,1242
-const logSuccess = (msg) => log(`- ${msg}`, "#00ff00");logSuccess42,1340
-const logError = (msg) => log(`- ${msg}`, "#ff0000");logError43,1396
-const logWarning = (msg) => log(`- ${msg}`, "#ffaa00");logWarning44,1450
-const logInfo = (msg) => log(`- ${msg}`, "#aaaaaa");logInfo45,1506
-async function getActiveProjectSafe() {getActiveProjectSafe54,1824
-async function getActiveSequenceSafe() {getActiveSequenceSafe71,2237
-async function formatTickTime(tickTime) {formatTickTime90,2733
-async function testProjectInfo() {testProjectInfo107,3252
-async function testSequenceInfo() {testSequenceInfo125,3776
-async function testVideoTrackItems() {testVideoTrackItems150,4698
-async function testTickTime() {testTickTime189,6130
-async function customTestSequenceInfo() {customTestSequenceInfo235,7910
-async function customTest() {customTest264,9079
-function normalizePath(path) {normalizePath311,10860
-async function relinkSourceBinMedia(oldBasePath, newBasePath) {relinkSourceBinMedia322,11347
-        success: 0,success326,11547
-        failed: 0,failed327,11567
-        errors: [],errors328,11586
-    const results = {results325,11525
-        async function processFolder(folder) {processFolder360,12907
-async function runAllTests() {runAllTests432,16443
-async function runCustomTest() {runCustomTest451,17005
-async function metadataGrabber() {metadataGrabber460,17326
-    const runAllBtn = document.querySelector("#run-all-btn");runAllBtn482,18134
-    const runCustomBtn = document.querySelector("#run-custom-btn");runCustomBtn483,18196
-    const clearBtn = document.querySelector("#clear-btn");clearBtn484,18264
-
 types.d.ts,13322
 export declare type premierepro = {premierepro1,0
 export declare type Action = {Action52,1818
@@ -295,3 +262,27 @@ export namespace Constants {Constants969,63241
 		YELLOW,YELLOW1169,65848
 		BLUE,BLUE1170,65858
 		CYANCYAN1172,65866
+
+main.js,1415
+const ppro = require("premierepro");ppro1,0
+let cachedMediaFiles = [];cachedMediaFiles4,90
+const log = (msg, color) => {log6,118
+    const body = document.getElementById("plugin-body");body7,148
+const clearLog = () => {clearLog15,358
+    const body = document.getElementById("plugin-body");body16,383
+const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");logSuccess22,495
+const logError = (msg) => log(`> ${msg}`, "#ff0000");logError23,551
+const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");logWarning24,605
+const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");logInfo25,661
+async function getActiveProjectSafe() {getActiveProjectSafe27,715
+async function collectMediaFiles(folder) {collectMediaFiles41,1072
+                        mediaFiles.push({anonymousObjectf10861b2010556,1663
+                            name: item.name,name57,1705
+                            path: pathpath58,1750
+async function saveMediaFilesToTxt() {saveMediaFilesToTxt78,2307
+        const file = await localFileSystem.getFileForSaving("project-media.txt", {anonymousObjectf10861b2020585,2522
+            types: ["txt"]types86,2605
+async function run() {run103,3047
+    const runBtn = document.querySelector("#run-btn");runBtn129,3704
+    const exportBtn = document.querySelector("#export-btn");exportBtn130,3759
+    const clearBtn = document.querySelector("#clear-btn");clearBtn131,3820
