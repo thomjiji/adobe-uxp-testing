@@ -1,7 +1,7 @@
 {
-  "id": "test-2",
-  "name": "UXP API Playground",
-  "shortname": "uxp-api-playground",
+  "id": "get-file-paths",
+  "name": "Get File Paths",
+  "shortname": "get-file-paths",
   "version": "1.0.0",
   "main": "src/index.html",
   "host": [
