@@ -68,6 +68,81 @@ async function collectDeepClips(folder, targetBin, currentDepth, clipsToMove) {
   }
 }
 
+async function collectEmptyBins(folder, emptyBins) {
+  const items = await folder.getItems();
+
+  for (const item of items) {
+    if (item.type === 2) {
+      const subFolder = ppro.FolderItem.cast(item);
+      if (subFolder) {
+        await collectEmptyBins(subFolder, emptyBins);
+
+        const subItems = await subFolder.getItems();
+        if (subItems.length === 0) {
+          emptyBins.push({
+            bin: subFolder,
+            item: item,
+            parent: folder,
+          });
+        }
+      }
+    }
+  }
+}
+
+async function removeEmptyBins(selectedBins, project) {
+  log("\n───────────────────────────────────");
+  log("Checking for empty bins to remove...");
+
+  let totalRemovedCount = 0;
+  let passCount = 0;
+  let foundEmpty = true;
+
+  while (foundEmpty) {
+    passCount++;
+    const allEmptyBins = [];
+
+    for (const binData of selectedBins) {
+      const emptyBins = [];
+      await collectEmptyBins(binData.bin, emptyBins);
+
+      if (emptyBins.length > 0) {
+        allEmptyBins.push(...emptyBins);
+      }
+    }
+
+    if (allEmptyBins.length === 0) {
+      foundEmpty = false;
+      if (passCount === 1) {
+        logInfo("No empty bins found.");
+      }
+      break;
+    }
+
+    if (passCount === 1) {
+      logWarning(`Found ${allEmptyBins.length} empty bin(s) to remove...`);
+    } else {
+      logInfo(`Pass ${passCount}: Found ${allEmptyBins.length} additional empty bin(s)...`);
+    }
+
+    let removedCount = 0;
+    project.executeTransaction((compoundAction) => {
+      for (const binData of allEmptyBins) {
+        const removeAction = binData.parent.createRemoveItemAction(binData.item);
+        if (removeAction) {
+          compoundAction.addAction(removeAction);
+          removedCount++;
+          logInfo(`  Removed: ${binData.item.name}`);
+        }
+      }
+    }, `Remove Empty Bins (Pass ${passCount})`);
+
+    totalRemovedCount += removedCount;
+  }
+
+  return totalRemovedCount;
+}
+
 async function run() {
   try {
     clearLog();
@@ -148,6 +223,15 @@ async function run() {
     }, "Flatten Multiple Bins");
 
     logSuccess(`\nSuccessfully flattened ${movedCount} clip(s) across ${selectedBins.length} bin(s)`);
+
+    const removedCount = await removeEmptyBins(selectedBins, project);
+
+    if (removedCount > 0) {
+      logSuccess(`\nCleanup complete: Removed ${removedCount} empty bin(s)`);
+    }
+
+    log("\n───────────────────────────────────");
+    logSuccess(`Operation complete!`);
   } catch (error) {
     logError(`Error: ${error.message}`);
   }
