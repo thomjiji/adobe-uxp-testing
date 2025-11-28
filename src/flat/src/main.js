@@ -39,6 +39,27 @@ async function getActiveProjectSafe() {
   }
 }
 
+async function isDescendantOf(childBin, potentialParent) {
+  try {
+    let current = childBin.getParentBin();
+
+    while (current) {
+      const currentId = current.getId();
+      const parentId = potentialParent.getId ? potentialParent.getId() : null;
+
+      if (currentId === parentId) {
+        return true;
+      }
+
+      current = current.getParentBin();
+    }
+
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
+
 async function collectDeepClips(folder, targetBin, currentDepth, clipsToMove) {
   const items = await folder.getItems();
 
@@ -68,14 +89,14 @@ async function collectDeepClips(folder, targetBin, currentDepth, clipsToMove) {
   }
 }
 
-async function collectEmptyBins(folder, emptyBins) {
+async function collectEmptyBins(folder, emptyBins, depth = 0) {
   const items = await folder.getItems();
 
   for (const item of items) {
     if (item.type === 2) {
       const subFolder = ppro.FolderItem.cast(item);
       if (subFolder) {
-        await collectEmptyBins(subFolder, emptyBins);
+        await collectEmptyBins(subFolder, emptyBins, depth + 1);
 
         const subItems = await subFolder.getItems();
         if (subItems.length === 0) {
@@ -83,7 +104,9 @@ async function collectEmptyBins(folder, emptyBins) {
             bin: subFolder,
             item: item,
             parent: folder,
+            depth: depth,
           });
+          logInfo(`  Found empty bin at depth ${depth + 1}: ${item.name}`);
         }
       }
     }
@@ -101,13 +124,23 @@ async function removeEmptyBins(selectedBins, project) {
   while (foundEmpty) {
     passCount++;
     const allEmptyBins = [];
+    const seenBinIds = new Set();
 
     for (const binData of selectedBins) {
       const emptyBins = [];
+      logInfo(`Scanning for empty bins in: ${binData.item.name}`);
       await collectEmptyBins(binData.bin, emptyBins);
 
-      if (emptyBins.length > 0) {
-        allEmptyBins.push(...emptyBins);
+      logInfo(`  Found ${emptyBins.length} empty bin(s) in "${binData.item.name}"`);
+
+      for (const emptyBin of emptyBins) {
+        const binId = emptyBin.item.getId();
+        if (!seenBinIds.has(binId)) {
+          seenBinIds.add(binId);
+          allEmptyBins.push(emptyBin);
+        } else {
+          logInfo(`  Skipping duplicate: ${emptyBin.item.name}`);
+        }
       }
     }
 
@@ -176,13 +209,39 @@ async function run() {
       return;
     }
 
-    logSuccess(`Processing ${selectedBins.length} selected bin(s)...`);
+    const finalBins = [];
+    for (let i = 0; i < selectedBins.length; i++) {
+      let isChild = false;
+      const binId = selectedBins[i].item.getId();
+
+      for (let j = 0; j < selectedBins.length; j++) {
+        if (i !== j) {
+          const potentialParent = selectedBins[j].bin;
+          if (await isDescendantOf(selectedBins[i].bin, potentialParent)) {
+            isChild = true;
+            logInfo(`Skipping "${selectedBins[i].item.name}" - parent bin "${selectedBins[j].item.name}" is also selected`);
+            break;
+          }
+        }
+      }
+
+      if (!isChild) {
+        finalBins.push(selectedBins[i]);
+      }
+    }
+
+    if (finalBins.length === 0) {
+      logError("All selected bins were filtered out as children of other selected bins.");
+      return;
+    }
+
+    logSuccess(`Processing ${finalBins.length} bin(s) (${selectedBins.length - finalBins.length} skipped as children)...`);
     log("───────────────────────────────────");
 
     const allClipsToMove = [];
     let totalClipsFound = 0;
 
-    for (const binData of selectedBins) {
+    for (const binData of finalBins) {
       log(`\nProcessing bin: ${binData.item.name}`);
       log("Scanning for clips in folders deeper than 2 levels...");
 
@@ -222,9 +281,9 @@ async function run() {
       }
     }, "Flatten Multiple Bins");
 
-    logSuccess(`\nSuccessfully flattened ${movedCount} clip(s) across ${selectedBins.length} bin(s)`);
+    logSuccess(`\nSuccessfully flattened ${movedCount} clip(s) across ${finalBins.length} bin(s)`);
 
-    const removedCount = await removeEmptyBins(selectedBins, project);
+    const removedCount = await removeEmptyBins(finalBins, project);
 
     if (removedCount > 0) {
       logSuccess(`\nCleanup complete: Removed ${removedCount} empty bin(s)`);
