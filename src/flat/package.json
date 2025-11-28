@@ -1,0 +1,11 @@
+{
+  "name": "flat",
+  "version": "1.0.0",
+  "description": "Flatting bin structure",
+  "author": "thomjiji",
+  "license": "Apache-2.0",
+  "scripts": {
+    "deploy": "rsync -aviPh --info=progress --out-format='%i %n%L %C' --delete /home/geekshootjack/git/adobe-uxp-testing/src/flat/ data-1-win-tailnet:/cygdrive/c/Users/GSJ-DATA-1/git/adobe-uxp-testing/src/flat/",
+    "tags": "ctags -e $(find src -type f -iname '*.[jt]s')"
+  }
+}
