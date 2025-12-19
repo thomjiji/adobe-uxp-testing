@@ -3,6 +3,7 @@ const { localFileSystem } = require("uxp").storage;
 
 let cachedMediaFiles = [];
 let cachedOfflineFiles = [];
+let lastScanType = null; // Track which scan was run last: 'media' or 'offline'
 
 // Progress tracking for batched processing
 let scanProgress = {
@@ -39,6 +40,11 @@ const clearLog = () => {
   if (body) {
     body.innerHTML = "";
   }
+
+  // Also clear cached scan results
+  cachedMediaFiles = [];
+  cachedOfflineFiles = [];
+  lastScanType = null;
 };
 
 const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");
@@ -119,8 +125,8 @@ async function collectMediaFilesFromItems(items, batchSize = 10) {
   const allMediaFiles = [];
 
   for (const item of items) {
-    if (item.type === 2) {
-      // It's a BIN/FOLDER - scan recursively
+    if (item.type === 2 || item.type === 3) {
+      // It's a BIN/FOLDER or ROOT - scan recursively
       const folder = ppro.FolderItem.cast(item);
       if (folder) {
         log(`Scanning bin: ${item.name}`);
@@ -161,8 +167,8 @@ async function collectOfflineFilesFromItems(items, batchSize = 10) {
   const allOfflineFiles = [];
 
   for (const item of items) {
-    if (item.type === 2) {
-      // It's a BIN/FOLDER - scan recursively
+    if (item.type === 2 || item.type === 3) {
+      // It's a BIN/FOLDER or ROOT - scan recursively
       const folder = ppro.FolderItem.cast(item);
       if (folder) {
         log(`Scanning bin: ${item.name}`);
@@ -204,8 +210,8 @@ async function countItemsInSelection(items) {
   let totalCount = 0;
 
   for (const item of items) {
-    if (item.type === 2) {
-      // It's a BIN - count all items inside recursively
+    if (item.type === 2 || item.type === 3) {
+      // It's a BIN or ROOT - count all items inside recursively
       const folder = ppro.FolderItem.cast(item);
       if (folder) {
         totalCount += await countItems(folder);
@@ -327,19 +333,29 @@ async function collectOfflineFiles(folder, batchSize = 10) {
   return offlineFiles;
 }
 
-// Export scan results (prioritizes offline files if available)
+// Export scan results (exports the most recent scan)
 async function exportResults() {
   try {
-    // Determine which scan results to export (prioritize offline)
+    // Determine which scan results to export based on last scan type
     let dataToExport = null;
     let defaultFilename = null;
     let scanType = null;
 
-    if (cachedOfflineFiles && cachedOfflineFiles.length > 0) {
+    if (lastScanType === 'offline' && cachedOfflineFiles && cachedOfflineFiles.length > 0) {
+      dataToExport = cachedOfflineFiles;
+      defaultFilename = "offline-media";
+      scanType = "offline";
+    } else if (lastScanType === 'media' && cachedMediaFiles && cachedMediaFiles.length > 0) {
+      dataToExport = cachedMediaFiles;
+      defaultFilename = "media-files";
+      scanType = "media";
+    } else if (cachedOfflineFiles && cachedOfflineFiles.length > 0) {
+      // Fallback to offline if no recent scan tracked
       dataToExport = cachedOfflineFiles;
       defaultFilename = "offline-media";
       scanType = "offline";
     } else if (cachedMediaFiles && cachedMediaFiles.length > 0) {
+      // Fallback to media if no recent scan tracked
       dataToExport = cachedMediaFiles;
       defaultFilename = "media-files";
       scanType = "media";
@@ -395,6 +411,7 @@ async function scanMedia() {
 
     clearProgress();
     cachedMediaFiles = mediaFiles;
+    lastScanType = 'media'; // Mark that media scan was run last
 
     const elapsed = Math.round((Date.now() - scanProgress.startTime) / 1000);
     logSuccess(`Found ${mediaFiles.length} media files in selection (${elapsed}s)`);
@@ -439,6 +456,7 @@ async function scanOffline() {
 
     clearProgress();
     cachedOfflineFiles = offlineFiles;
+    lastScanType = 'offline'; // Mark that offline scan was run last
 
     const elapsed = Math.round((Date.now() - scanProgress.startTime) / 1000);
 
@@ -448,9 +466,14 @@ async function scanOffline() {
       logError(`Found ${offlineFiles.length} offline files in selection (${elapsed}s)`);
     }
 
-    // Print offline results
-    for (const file of offlineFiles) {
+    // Print offline results (limit to first 100 to avoid DOM overload)
+    const displayLimit = Math.min(offlineFiles.length, 100);
+    for (let i = 0; i < displayLimit; i++) {
+      const file = offlineFiles[i];
       log(`${file.name}: ${file.path}`, "#ff0000");
+    }
+    if (offlineFiles.length > displayLimit) {
+      log(`... and ${offlineFiles.length - displayLimit} more offline files (use Export to see all)`, "#ff0000");
     }
   } catch (error) {
     clearProgress();
