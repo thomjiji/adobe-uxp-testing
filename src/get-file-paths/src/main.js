@@ -88,6 +88,137 @@ async function getActiveProjectSafe() {
   }
 }
 
+// Get selected items from project panel, or return root if nothing selected
+async function getSelectedItemsOrRoot() {
+  try {
+    const project = await getActiveProjectSafe();
+    if (!project) return null;
+
+    // Get current selection from project panel
+    const selection = await ppro.ProjectUtils.getSelection(project);
+    const selectedItems = await selection.getItems();
+
+    if (selectedItems.length === 0) {
+      // Nothing selected - return root as single-item array for consistency
+      log("No selection detected, scanning entire project");
+      const rootItem = await project.getRootItem();
+      return [rootItem];
+    }
+
+    // Return selected items
+    log(`Found ${selectedItems.length} selected item(s)`);
+    return selectedItems;
+  } catch (error) {
+    logError(`Error getting selection: ${error.message}`);
+    return null;
+  }
+}
+
+// Scan multiple items (bins and/or clips) for media files
+async function collectMediaFilesFromItems(items, batchSize = 10) {
+  const allMediaFiles = [];
+
+  for (const item of items) {
+    if (item.type === 2) {
+      // It's a BIN/FOLDER - scan recursively
+      const folder = ppro.FolderItem.cast(item);
+      if (folder) {
+        log(`Scanning bin: ${item.name}`);
+        const mediaFiles = await collectMediaFiles(folder, batchSize);
+        allMediaFiles.push(...mediaFiles);
+      }
+    } else {
+      // It's a CLIP or other item - process directly
+      const clipItem = ppro.ClipProjectItem.cast(item);
+      if (clipItem) {
+        const isSeq = await clipItem.isSequence();
+        if (!isSeq) {
+          const path = await clipItem.getMediaFilePath();
+          if (path) {
+            allMediaFiles.push({
+              name: item.name,
+              path: path,
+            });
+          }
+        }
+
+        scanProgress.processed++;
+        updateProgress(scanProgress.processed, scanProgress.total, item.name);
+      }
+
+      // Yield periodically
+      if (scanProgress.processed % batchSize === 0) {
+        await yieldToUI();
+      }
+    }
+  }
+
+  return allMediaFiles;
+}
+
+// Scan multiple items (bins and/or clips) for offline files
+async function collectOfflineFilesFromItems(items, batchSize = 10) {
+  const allOfflineFiles = [];
+
+  for (const item of items) {
+    if (item.type === 2) {
+      // It's a BIN/FOLDER - scan recursively
+      const folder = ppro.FolderItem.cast(item);
+      if (folder) {
+        log(`Scanning bin: ${item.name}`);
+        const offlineFiles = await collectOfflineFiles(folder, batchSize);
+        allOfflineFiles.push(...offlineFiles);
+      }
+    } else {
+      // It's a CLIP or other item - check if offline
+      const clipItem = ppro.ClipProjectItem.cast(item);
+      if (clipItem) {
+        const isSeq = await clipItem.isSequence();
+        if (!isSeq) {
+          const offline = await clipItem.isOffline();
+          if (offline) {
+            const path = await clipItem.getMediaFilePath();
+            allOfflineFiles.push({
+              name: item.name,
+              path: path,
+            });
+          }
+        }
+
+        scanProgress.processed++;
+        updateProgress(scanProgress.processed, scanProgress.total, item.name);
+      }
+
+      // Yield periodically
+      if (scanProgress.processed % batchSize === 0) {
+        await yieldToUI();
+      }
+    }
+  }
+
+  return allOfflineFiles;
+}
+
+// Count total items in selected items (for progress tracking)
+async function countItemsInSelection(items) {
+  let totalCount = 0;
+
+  for (const item of items) {
+    if (item.type === 2) {
+      // It's a BIN - count all items inside recursively
+      const folder = ppro.FolderItem.cast(item);
+      if (folder) {
+        totalCount += await countItems(folder);
+      }
+    } else {
+      // It's a single CLIP - count as 1
+      totalCount++;
+    }
+  }
+
+  return totalCount;
+}
+
 // Count total items for accurate progress tracking
 async function countItems(folder) {
   let count = 0;
@@ -336,21 +467,117 @@ async function run() {
   }
 }
 
+// Scan selected items (or all if nothing selected)
+async function runSelected() {
+  try {
+    clearLog();
+    clearProgress();
+
+    log("Getting selection...");
+
+    // Get selected items or root if nothing selected
+    const items = await getSelectedItemsOrRoot();
+    if (!items) return;
+
+    // Count total items for progress tracking
+    log("Counting items...");
+    scanProgress.total = await countItemsInSelection(items);
+    scanProgress.processed = 0;
+    scanProgress.startTime = Date.now();
+
+    log(`Found ${scanProgress.total} items to scan`);
+
+    // Scan the selected items (or root)
+    const mediaFiles = await collectMediaFilesFromItems(items, 10);
+
+    clearProgress();
+    cachedMediaFiles = mediaFiles;
+
+    const elapsed = Math.round((Date.now() - scanProgress.startTime) / 1000);
+    logSuccess(`Found ${mediaFiles.length} media files in selection (${elapsed}s)`);
+
+    // Print results (limit to first 100 to avoid DOM overload)
+    const displayLimit = Math.min(mediaFiles.length, 100);
+    for (let i = 0; i < displayLimit; i++) {
+      const file = mediaFiles[i];
+      log(`${file.name}: ${file.path}`);
+    }
+    if (mediaFiles.length > displayLimit) {
+      log(`... and ${mediaFiles.length - displayLimit} more files (use Export to see all)`);
+    }
+  } catch (error) {
+    clearProgress();
+    logError(`Error: ${error.message}`);
+  }
+}
+
+// Find offline files in selected items (or all if nothing selected)
+async function findOfflineFilesSelected() {
+  try {
+    clearLog();
+    clearProgress();
+
+    log("Getting selection...");
+
+    // Get selected items or root if nothing selected
+    const items = await getSelectedItemsOrRoot();
+    if (!items) return;
+
+    // Count total items for progress tracking
+    log("Counting items...");
+    scanProgress.total = await countItemsInSelection(items);
+    scanProgress.processed = 0;
+    scanProgress.startTime = Date.now();
+
+    log(`Found ${scanProgress.total} items to scan`);
+
+    // Scan for offline files in selected items (or root)
+    const offlineFiles = await collectOfflineFilesFromItems(items, 10);
+
+    clearProgress();
+    cachedOfflineFiles = offlineFiles;
+
+    const elapsed = Math.round((Date.now() - scanProgress.startTime) / 1000);
+
+    if (offlineFiles.length === 0) {
+      logSuccess(`No offline files found in selection! (${elapsed}s)`);
+    } else {
+      logError(`Found ${offlineFiles.length} offline files in selection (${elapsed}s)`);
+    }
+
+    // Print offline results
+    for (const file of offlineFiles) {
+      log(`${file.name}: ${file.path}`, "#ff0000");
+    }
+  } catch (error) {
+    clearProgress();
+    logError(`Error: ${error.message}`);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const scanBtn = document.querySelector("#scan-btn");
+  const scanSelectedBtn = document.querySelector("#scan-selected-btn");
   const exportBtn = document.querySelector("#export-btn");
   const scanOfflineBtn = document.querySelector("#scan-offline-btn");
+  const scanOfflineSelectedBtn = document.querySelector("#scan-offline-selected-btn");
   const exportOfflineBtn = document.querySelector("#export-offline-btn");
   const clearBtn = document.querySelector("#clear-btn");
 
   if (scanBtn) {
     scanBtn.addEventListener("click", run);
   }
+  if (scanSelectedBtn) {
+    scanSelectedBtn.addEventListener("click", runSelected);
+  }
   if (exportBtn) {
     exportBtn.addEventListener("click", saveMediaFilesToTxt);
   }
   if (scanOfflineBtn) {
     scanOfflineBtn.addEventListener("click", findOfflineFiles);
+  }
+  if (scanOfflineSelectedBtn) {
+    scanOfflineSelectedBtn.addEventListener("click", findOfflineFilesSelected);
   }
   if (exportOfflineBtn) {
     exportOfflineBtn.addEventListener("click", saveOfflineFilesToTxt);
