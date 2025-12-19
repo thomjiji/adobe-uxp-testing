@@ -327,56 +327,28 @@ async function collectOfflineFiles(folder, batchSize = 10) {
   return offlineFiles;
 }
 
-async function findOfflineFiles() {
+// Export scan results (prioritizes offline files if available)
+async function exportResults() {
   try {
-    clearLog();
-    clearProgress();
+    // Determine which scan results to export (prioritize offline)
+    let dataToExport = null;
+    let defaultFilename = null;
+    let scanType = null;
 
-    log("Counting items...");
-    const project = await getActiveProjectSafe();
-    if (!project) return;
-
-    const rootItem = await project.getRootItem();
-
-    // Count total items for progress tracking
-    scanProgress.total = await countItems(rootItem);
-    scanProgress.processed = 0;
-    scanProgress.startTime = Date.now();
-
-    log(`Found ${scanProgress.total} items to scan`);
-
-    // Perform batched scan with progress feedback
-    const offlineFiles = await collectOfflineFiles(rootItem, 10);
-
-    clearProgress();
-    cachedOfflineFiles = offlineFiles;
-
-    const elapsed = Math.round((Date.now() - scanProgress.startTime) / 1000);
-
-    if (offlineFiles.length === 0) {
-      logSuccess(`No offline files found! All media is online. (${elapsed}s)`);
+    if (cachedOfflineFiles && cachedOfflineFiles.length > 0) {
+      dataToExport = cachedOfflineFiles;
+      defaultFilename = "offline-media";
+      scanType = "offline";
+    } else if (cachedMediaFiles && cachedMediaFiles.length > 0) {
+      dataToExport = cachedMediaFiles;
+      defaultFilename = "media-files";
+      scanType = "media";
     } else {
-      logError(`Found ${offlineFiles.length} offline files in ${elapsed}s`);
-    }
-
-    // Print offline results
-    for (const file of offlineFiles) {
-      log(`${file.name}: ${file.path}`, "#ff0000");
-    }
-  } catch (error) {
-    clearProgress();
-    logError(`Error: ${error.message}`);
-  }
-}
-
-async function saveMediaFilesToTxt() {
-  try {
-    if (!cachedMediaFiles || cachedMediaFiles.length === 0) {
-      logWarning("No media files to export. Run scan first.");
+      logWarning("No files to export. Run a scan first.");
       return;
     }
 
-    const file = await localFileSystem.getFileForSaving("project-media", {
+    const file = await localFileSystem.getFileForSaving(defaultFilename, {
       types: ["txt"],
     });
 
@@ -385,90 +357,21 @@ async function saveMediaFilesToTxt() {
       return;
     }
 
-    const content = cachedMediaFiles
+    const content = dataToExport
       .map((item) => `${item.name}\t${item.path}`)
       .join("\n");
     await file.write(content);
 
     logSuccess(
-      `Saved ${cachedMediaFiles.length} file paths to: ${file.nativePath}`,
+      `Saved ${dataToExport.length} ${scanType} file paths to: ${file.nativePath}`,
     );
   } catch (error) {
     logError(`Error saving file: ${error.message}`);
   }
 }
 
-async function saveOfflineFilesToTxt() {
-  try {
-    if (!cachedOfflineFiles || cachedOfflineFiles.length === 0) {
-      logWarning("No offline files to export. Run offline scan first.");
-      return;
-    }
-
-    const file = await localFileSystem.getFileForSaving("offline-media", {
-      types: ["txt"],
-    });
-
-    if (!file) {
-      logInfo("Export cancelled");
-      return;
-    }
-
-    const content = cachedOfflineFiles
-      .map((item) => `${item.name}\t${item.path}`)
-      .join("\n");
-    await file.write(content);
-
-    logSuccess(
-      `Saved ${cachedOfflineFiles.length} offline file paths to: ${file.nativePath}`,
-    );
-  } catch (error) {
-    logError(`Error saving file: ${error.message}`);
-  }
-}
-
-async function run() {
-  try {
-    clearLog();
-    clearProgress();
-
-    log("Counting items...");
-    const project = await getActiveProjectSafe();
-    if (!project) return;
-
-    const rootItem = await project.getRootItem();
-
-    scanProgress.total = await countItems(rootItem);
-    scanProgress.processed = 0;
-    scanProgress.startTime = Date.now();
-
-    log(`Found ${scanProgress.total} items to scan`);
-
-    const mediaFiles = await collectMediaFiles(rootItem, 10);
-
-    clearProgress();
-    cachedMediaFiles = mediaFiles;
-
-    const elapsed = Math.round((Date.now() - scanProgress.startTime) / 1000);
-    logSuccess(`Found ${mediaFiles.length} media files in project (${elapsed}s)`);
-
-    // Print results (limit to first 100 to avoid DOM overload)
-    const displayLimit = Math.min(mediaFiles.length, 100);
-    for (let i = 0; i < displayLimit; i++) {
-      const file = mediaFiles[i];
-      log(`${file.name}: ${file.path}`);
-    }
-    if (mediaFiles.length > displayLimit) {
-      log(`... and ${mediaFiles.length - displayLimit} more files (use Export to see all)`);
-    }
-  } catch (error) {
-    clearProgress();
-    logError(`Error: ${error.message}`);
-  }
-}
-
-// Scan selected items (or all if nothing selected)
-async function runSelected() {
+// Scan media in selected items (or all if nothing selected)
+async function scanMedia() {
   try {
     clearLog();
     clearProgress();
@@ -511,8 +414,8 @@ async function runSelected() {
   }
 }
 
-// Find offline files in selected items (or all if nothing selected)
-async function findOfflineFilesSelected() {
+// Scan offline files in selected items (or all if nothing selected)
+async function scanOffline() {
   try {
     clearLog();
     clearProgress();
@@ -556,31 +459,19 @@ async function findOfflineFilesSelected() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const scanBtn = document.querySelector("#scan-btn");
-  const scanSelectedBtn = document.querySelector("#scan-selected-btn");
-  const exportBtn = document.querySelector("#export-btn");
+  const scanMediaBtn = document.querySelector("#scan-media-btn");
   const scanOfflineBtn = document.querySelector("#scan-offline-btn");
-  const scanOfflineSelectedBtn = document.querySelector("#scan-offline-selected-btn");
-  const exportOfflineBtn = document.querySelector("#export-offline-btn");
+  const exportBtn = document.querySelector("#export-btn");
   const clearBtn = document.querySelector("#clear-btn");
 
-  if (scanBtn) {
-    scanBtn.addEventListener("click", run);
-  }
-  if (scanSelectedBtn) {
-    scanSelectedBtn.addEventListener("click", runSelected);
-  }
-  if (exportBtn) {
-    exportBtn.addEventListener("click", saveMediaFilesToTxt);
+  if (scanMediaBtn) {
+    scanMediaBtn.addEventListener("click", scanMedia);
   }
   if (scanOfflineBtn) {
-    scanOfflineBtn.addEventListener("click", findOfflineFiles);
+    scanOfflineBtn.addEventListener("click", scanOffline);
   }
-  if (scanOfflineSelectedBtn) {
-    scanOfflineSelectedBtn.addEventListener("click", findOfflineFilesSelected);
-  }
-  if (exportOfflineBtn) {
-    exportOfflineBtn.addEventListener("click", saveOfflineFilesToTxt);
+  if (exportBtn) {
+    exportBtn.addEventListener("click", exportResults);
   }
   if (clearBtn) {
     clearBtn.addEventListener("click", clearLog);
