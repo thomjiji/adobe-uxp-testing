@@ -4,13 +4,34 @@ const { localFileSystem } = require("uxp").storage;
 let cachedMediaFiles = [];
 let cachedOfflineFiles = [];
 
+// Progress tracking for batched processing
+let scanProgress = {
+  total: 0,
+  processed: 0,
+  currentItem: '',
+  startTime: null
+};
+
+// Buffer log messages to reduce DOM manipulation
+let logBuffer = [];
+let logFlushTimer = null;
+
 const log = (msg, color) => {
-  const body = document.getElementById("plugin-body");
-  if (body) {
-    body.innerHTML += color
-      ? `<span style='color:${color}'>${msg}</span><br />`
-      : `${msg}<br />`;
-  }
+  const logEntry = color
+    ? `<span style='color:${color}'>${msg}</span><br />`
+    : `${msg}<br />`;
+
+  logBuffer.push(logEntry);
+
+  // Debounce DOM updates to every 100ms
+  if (logFlushTimer) clearTimeout(logFlushTimer);
+  logFlushTimer = setTimeout(() => {
+    const body = document.getElementById("plugin-body");
+    if (body && logBuffer.length > 0) {
+      body.innerHTML += logBuffer.join('');
+      logBuffer = [];
+    }
+  }, 100);
 };
 
 const clearLog = () => {
@@ -24,6 +45,34 @@ const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");
 const logError = (msg) => log(`> ${msg}`, "#ff0000");
 const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");
 const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");
+
+// Yield control to UI thread to prevent freezing
+function yieldToUI() {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+// Update progress text counter
+function updateProgress(processed, total, currentItem) {
+  const progressEl = document.getElementById('progress-text');
+  if (progressEl && total > 0) {
+    const percent = Math.round((processed / total) * 100);
+    const elapsed = Date.now() - scanProgress.startTime;
+    const rate = processed > 0 ? elapsed / processed : 0;
+    const remaining = rate > 0 ? Math.round((total - processed) * rate / 1000) : 0;
+
+    progressEl.innerHTML = `<span style="color: #00ff00; font-weight: bold;">
+      Scanning: ${processed}/${total} (${percent}%) - ${currentItem}<br/>
+      Estimated time remaining: ${remaining}s
+    </span>`;
+  }
+}
+
+function clearProgress() {
+  const progressEl = document.getElementById('progress-text');
+  if (progressEl) {
+    progressEl.innerHTML = '';
+  }
+}
 
 async function getActiveProjectSafe() {
   try {
@@ -39,35 +88,58 @@ async function getActiveProjectSafe() {
   }
 }
 
-async function collectMediaFiles(folder) {
-  const mediaFiles = [];
+// Count total items for accurate progress tracking
+async function countItems(folder) {
+  let count = 0;
   const items = await folder.getItems();
 
   for (const item of items) {
+    if (item.type === 2) {
+      // Recursively count items in bins
+      const subFolder = ppro.FolderItem.cast(item);
+      if (subFolder) {
+        count += await countItems(subFolder);
+      }
+    } else {
+      count++; // Count clips
+    }
+  }
+
+  return count;
+}
+
+async function collectMediaFiles(folder, batchSize = 10) {
+  const mediaFiles = [];
+  const items = await folder.getItems();
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    if (i > 0 && i % batchSize === 0) {
+      await yieldToUI();
+    }
+
     if (item.type !== 2) {
-      // It's a ClipProjectItem (type 1)
       const clipItem = ppro.ClipProjectItem.cast(item);
       if (clipItem) {
         const isSeq = await clipItem.isSequence();
-        if (isSeq) {
-          logInfo(`Skipping sequence: ${item.name}`);
-        } else {
+        if (!isSeq) {
           const path = await clipItem.getMediaFilePath();
           if (path) {
             mediaFiles.push({
               name: item.name,
               path: path,
             });
-            logInfo(`Found: ${item.name}`);
           }
         }
+
+        scanProgress.processed++;
+        updateProgress(scanProgress.processed, scanProgress.total, item.name);
       }
     } else {
-      // It's a bin (type 2), do recursion
       const subFolder = ppro.FolderItem.cast(item);
       if (subFolder) {
-        logInfo(`Entering bin: ${item.name}`);
-        const subFiles = await collectMediaFiles(subFolder);
+        const subFiles = await collectMediaFiles(subFolder, batchSize);
         mediaFiles.push(...subFiles);
       }
     }
@@ -76,19 +148,24 @@ async function collectMediaFiles(folder) {
   return mediaFiles;
 }
 
-async function collectOfflineFiles(folder) {
+// Batched offline file collection with progress tracking
+async function collectOfflineFiles(folder, batchSize = 10) {
   const offlineFiles = [];
   const items = await folder.getItems();
 
-  for (const item of items) {
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    // Yield to UI every N items
+    if (i > 0 && i % batchSize === 0) {
+      await yieldToUI();
+    }
+
     if (item.type !== 2) {
-      // It's a ClipProjectItem (type 1)
       const clipItem = ppro.ClipProjectItem.cast(item);
       if (clipItem) {
         const isSeq = await clipItem.isSequence();
-        if (isSeq) {
-          logInfo(`Skipping sequence: ${item.name}`);
-        } else {
+        if (!isSeq) {
           const offline = await clipItem.isOffline();
           if (offline) {
             const path = await clipItem.getMediaFilePath();
@@ -96,16 +173,21 @@ async function collectOfflineFiles(folder) {
               name: item.name,
               path: path,
             });
-            logWarning(`OFFLINE: ${item.name}`);
           }
         }
+
+        // Update progress after each clip
+        scanProgress.processed++;
+        updateProgress(scanProgress.processed, scanProgress.total, item.name);
       }
     } else {
-      // It's a bin (type 2), do recursion
+      // Process bins recursively
       const subFolder = ppro.FolderItem.cast(item);
       if (subFolder) {
-        logInfo(`Entering bin: ${item.name}`);
-        const subFiles = await collectOfflineFiles(subFolder);
+        scanProgress.currentItem = `Entering bin: ${item.name}`;
+        updateProgress(scanProgress.processed, scanProgress.total, scanProgress.currentItem);
+
+        const subFiles = await collectOfflineFiles(subFolder, batchSize);
         offlineFiles.push(...subFiles);
       }
     }
@@ -117,20 +199,33 @@ async function collectOfflineFiles(folder) {
 async function findOfflineFiles() {
   try {
     clearLog();
-    log("Scanning for offline clips...");
+    clearProgress();
 
+    log("Counting items...");
     const project = await getActiveProjectSafe();
     if (!project) return;
 
     const rootItem = await project.getRootItem();
-    const offlineFiles = await collectOfflineFiles(rootItem);
 
+    // Count total items for progress tracking
+    scanProgress.total = await countItems(rootItem);
+    scanProgress.processed = 0;
+    scanProgress.startTime = Date.now();
+
+    log(`Found ${scanProgress.total} items to scan`);
+
+    // Perform batched scan with progress feedback
+    const offlineFiles = await collectOfflineFiles(rootItem, 10);
+
+    clearProgress();
     cachedOfflineFiles = offlineFiles;
 
+    const elapsed = Math.round((Date.now() - scanProgress.startTime) / 1000);
+
     if (offlineFiles.length === 0) {
-      logSuccess("No offline files found! All media is online.");
+      logSuccess(`No offline files found! All media is online. (${elapsed}s)`);
     } else {
-      logError(`Found ${offlineFiles.length} offline files`);
+      logError(`Found ${offlineFiles.length} offline files in ${elapsed}s`);
     }
 
     // Print offline results
@@ -138,6 +233,7 @@ async function findOfflineFiles() {
       log(`${file.name}: ${file.path}`, "#ff0000");
     }
   } catch (error) {
+    clearProgress();
     logError(`Error: ${error.message}`);
   }
 }
@@ -203,23 +299,39 @@ async function saveOfflineFilesToTxt() {
 async function run() {
   try {
     clearLog();
-    log("Starting scan...");
+    clearProgress();
 
+    log("Counting items...");
     const project = await getActiveProjectSafe();
     if (!project) return;
 
     const rootItem = await project.getRootItem();
-    const mediaFiles = await collectMediaFiles(rootItem);
 
+    scanProgress.total = await countItems(rootItem);
+    scanProgress.processed = 0;
+    scanProgress.startTime = Date.now();
+
+    log(`Found ${scanProgress.total} items to scan`);
+
+    const mediaFiles = await collectMediaFiles(rootItem, 10);
+
+    clearProgress();
     cachedMediaFiles = mediaFiles;
 
-    logSuccess(`Found ${mediaFiles.length} media files in project`);
+    const elapsed = Math.round((Date.now() - scanProgress.startTime) / 1000);
+    logSuccess(`Found ${mediaFiles.length} media files in project (${elapsed}s)`);
 
-    // Print results
-    for (const file of mediaFiles) {
+    // Print results (limit to first 100 to avoid DOM overload)
+    const displayLimit = Math.min(mediaFiles.length, 100);
+    for (let i = 0; i < displayLimit; i++) {
+      const file = mediaFiles[i];
       log(`${file.name}: ${file.path}`);
     }
+    if (mediaFiles.length > displayLimit) {
+      log(`... and ${mediaFiles.length - displayLimit} more files (use Export to see all)`);
+    }
   } catch (error) {
+    clearProgress();
     logError(`Error: ${error.message}`);
   }
 }
