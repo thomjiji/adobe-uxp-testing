@@ -5,4 +5,4 @@ Get file paths, export to a txt file so I can do something useful outside of Pre
 3. Scan only selected bins
 
 TODO:
-1. Export button, default filename should have date info.
+[DONE] 1. Export button, default filename should have date info.
