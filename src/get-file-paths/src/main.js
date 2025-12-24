@@ -379,7 +379,7 @@ async function exportResults() {
     }
 
     const file = await localFileSystem.getFileForSaving(defaultFilename, {
-      types: ["txt", "csv"],
+      types: ["csv", "txt"],
     });
 
     if (!file) {

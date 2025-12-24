@@ -1,4 +1,4 @@
-Get file paths, export to a txt file so I can do something useful outside of Premiere.
+Get file paths, export to a csv file so I can do something useful outside of Premiere.
 
 1. Scan all media under root
 2. Find all offline media under root
