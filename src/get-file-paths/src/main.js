@@ -66,7 +66,7 @@ function updateProgress(processed, total, currentItem) {
     const rate = processed > 0 ? elapsed / processed : 0;
     const remaining = rate > 0 ? Math.round((total - processed) * rate / 1000) : 0;
 
-    progressEl.innerHTML = `<span style="color: #00ff00; font-weight: bold;">
+    progressEl.innerHTML = `<span style="color: #00ff00;">
       Scanning: ${processed}/${total} (${percent}%) - ${currentItem}<br/>
       Estimated time remaining: ${remaining}s
     </span>`;
@@ -379,7 +379,7 @@ async function exportResults() {
     }
 
     const file = await localFileSystem.getFileForSaving(defaultFilename, {
-      types: ["txt"],
+      types: ["txt", "csv"],
     });
 
     if (!file) {
@@ -387,9 +387,21 @@ async function exportResults() {
       return;
     }
 
-    const content = dataToExport
-      .map((item) => `${item.name}\t${item.path}`)
-      .join("\n");
+    let content = "";
+    const isCsv = file.name.toLowerCase().endsWith(".csv");
+
+    if (isCsv) {
+      // CSV format: "Name","Path"
+      content = "Name,Path\n" + dataToExport
+        .map((item) => `"${item.name.replace(/"/g, '""')}","${item.path.replace(/"/g, '""')}"`)
+        .join("\n");
+    } else {
+      // TXT format: Name\tPath
+      content = dataToExport
+        .map((item) => `${item.name}\t${item.path}`)
+        .join("\n");
+    }
+
     await file.write(content);
 
     logSuccess(
