@@ -333,6 +333,19 @@ async function collectOfflineFiles(folder, batchSize = 10) {
   return offlineFiles;
 }
 
+/**
+ * Returns a formatted timestamp string (YYYYMMDDHHmm)
+ */
+function getFormattedTimestamp() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${year}${month}${day}${hours}${minutes}`;
+}
+
 // Export scan results (exports the most recent scan)
 async function exportResults() {
   try {
@@ -340,24 +353,25 @@ async function exportResults() {
     let dataToExport = null;
     let defaultFilename = null;
     let scanType = null;
+    const timestamp = getFormattedTimestamp();
 
     if (lastScanType === 'offline' && cachedOfflineFiles && cachedOfflineFiles.length > 0) {
       dataToExport = cachedOfflineFiles;
-      defaultFilename = "offline-media";
+      defaultFilename = `offline-media-${timestamp}`;
       scanType = "offline";
     } else if (lastScanType === 'media' && cachedMediaFiles && cachedMediaFiles.length > 0) {
       dataToExport = cachedMediaFiles;
-      defaultFilename = "media-files";
+      defaultFilename = `media-files-${timestamp}`;
       scanType = "media";
     } else if (cachedOfflineFiles && cachedOfflineFiles.length > 0) {
       // Fallback to offline if no recent scan tracked
       dataToExport = cachedOfflineFiles;
-      defaultFilename = "offline-media";
+      defaultFilename = `offline-media-${timestamp}`;
       scanType = "offline";
     } else if (cachedMediaFiles && cachedMediaFiles.length > 0) {
       // Fallback to media if no recent scan tracked
       dataToExport = cachedMediaFiles;
-      defaultFilename = "media-files";
+      defaultFilename = `media-files-${timestamp}`;
       scanType = "media";
     } else {
       logWarning("No files to export. Run a scan first.");
