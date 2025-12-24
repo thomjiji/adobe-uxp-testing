@@ -7,6 +7,6 @@
     "scripts": {
         "deploy1": "rsync -aviPh --info=progress --out-format='%i %n%L %C' --delete /home/geekshootjack/git/adobe-uxp-testing/src/get-file-paths/ data-1-win-tailnet:/cygdrive/c/Users/GSJ-DATA-1/git/adobe-uxp-testing/src/get-file-paths",
         "deploy2": "rsync -aviPh --info=progress --out-format='%i %n%L %C' --delete /home/geekshootjack/git/adobe-uxp-testing/src/get-file-paths/ data-2-win-tailnet:/cygdrive/c/Users/geekshootjack/git/adobe-uxp-testing/src/get-file-paths",
-        "tags": "ctags -e $(find src -type f -iname '*.[jt]s')"
+        "tags": "ctags -e -R --exclude=node_modules src"
     }
 }

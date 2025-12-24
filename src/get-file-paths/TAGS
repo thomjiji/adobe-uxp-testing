@@ -1,140 +1,926 @@
 
-src/main.js,1484
-const ppro = require("premierepro");ppro1,0
-const localFileSystem = require("uxp").storage;localFileSystem2,37
-let cachedMediaFiles = [];cachedMediaFiles4,86
-const log = (msg, color) => {log6,114
-    const body = document.getElementById("plugin-body");body7,144
-const clearLog = () => {clearLog15,354
-    const body = document.getElementById("plugin-body");body16,379
-const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");logSuccess22,491
-const logError = (msg) => log(`> ${msg}`, "#ff0000");logError23,547
-const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");logWarning24,601
-const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");logInfo25,657
-async function getActiveProjectSafe() {getActiveProjectSafe27,711
-async function collectMediaFiles(folder) {collectMediaFiles41,1068
-                        mediaFiles.push({anonymousObjectbd73110c010556,1659
-                            name: item.name,name57,1701
-                            path: pathpath58,1746
-async function saveMediaFilesToTxt() {saveMediaFilesToTxt78,2303
-        const file = await localFileSystem.getFileForSaving("project-media.txt", {anonymousObjectbd73110c020585,2518
-            types: ["txt"]types86,2601
-async function run() {run103,3043
-    const runBtn = document.querySelector("#run-btn");runBtn129,3700
-    const exportBtn = document.querySelector("#export-btn");exportBtn130,3755
-    const clearBtn = document.querySelector("#clear-btn");clearBtn131,3816
+src/index.html,500
+    <div id="progress-text" style="margin: 10px 0; min-height: 40px;"></div>progress-text9,170
+      <sp-body id="plugin-body"></sp-body>plugin-body11,274
+      <sp-button id="scan-media-btn" variant="accent">Scan Media</sp-button>scan-media-btn14,341
+      <sp-button id="scan-offline-btn" variant="accent">Scan Offline</sp-button>scan-offline-btn15,418
+      <sp-button id="export-btn">Export</sp-button>export-btn16,499
+      <sp-button id="clear-btn">Clear</sp-button>clear-btn17,551
 
-src/types.d.ts,13322
+src/main.js,3149
+const ppro = require("premierepro");ppro1,0
+let cachedMediaFiles = [];cachedMediaFiles4,90
+let cachedOfflineFiles = [];cachedOfflineFiles5,117
+let lastScanType = null; // Track which scan was run last: 'media' or 'offline'lastScanType6,146
+  total: 0,total10,292
+  processed: 0,processed11,304
+  currentItem: '',currentItem12,320
+  startTime: nullstartTime13,339
+let scanProgress = {scanProgress9,271
+let logBuffer = [];logBuffer17,411
+let logFlushTimer = null;logFlushTimer18,431
+const log = (msg, color) => {log20,458
+  const logEntry = colorlogEntry21,488
+    const body = document.getElementById("plugin-body");body30,750
+const clearLog = () => {clearLog38,934
+  const body = document.getElementById("plugin-body");body39,959
+const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");logSuccess50,1173
+const logError = (msg) => log(`> ${msg}`, "#ff0000");logError51,1229
+const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");logWarning52,1283
+const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");logInfo53,1339
+function yieldToUI() {yieldToUI56,1443
+function updateProgress(processed, total, currentItem) {updateProgress61,1558
+function clearProgress() {clearProgress76,2189
+async function getActiveProjectSafe() {getActiveProjectSafe83,2337
+async function getSelectedItemsOrRoot() {getSelectedItemsOrRoot98,2729
+async function collectMediaFilesFromItems(items, batchSize = 10) {collectMediaFilesFromItems124,3569
+            allMediaFiles.push({anonymousObjectbd73110c0105144,4327
+              name: item.name,name145,4360
+              path: path,path146,4391
+async function collectOfflineFilesFromItems(items, batchSize = 10) {collectOfflineFilesFromItems166,4794
+            allOfflineFiles.push({anonymousObjectbd73110c0205187,5623
+              name: item.name,name188,5658
+              path: path,path189,5689
+async function countItemsInSelection(items) {countItemsInSelection209,6096
+async function countItems(folder) {countItems229,6592
+async function collectMediaFiles(folder, batchSize = 10) {collectMediaFiles248,6987
+            mediaFiles.push({anonymousObjectbd73110c0305266,7514
+              name: item.name,name267,7544
+              path: path,path268,7575
+async function collectOfflineFiles(folder, batchSize = 10) {collectOfflineFiles289,8060
+            offlineFiles.push({anonymousObjectbd73110c0405309,8683
+              name: item.name,name310,8715
+              path: path,path311,8746
+async function exportResults() {exportResults337,9470
+    const file = await localFileSystem.getFileForSaving(defaultFilename, {anonymousObjectbd73110c0505367,10620
+      types: ["txt"],types368,10695
+async function scanMedia() {scanMedia390,11182
+async function scanOffline() {scanOffline435,12633
+  const scanMediaBtn = document.querySelector("#scan-media-btn");scanMediaBtn485,14279
+  const scanOfflineBtn = document.querySelector("#scan-offline-btn");scanOfflineBtn486,14345
+  const exportBtn = document.querySelector("#export-btn");exportBtn487,14415
+  const clearBtn = document.querySelector("#clear-btn");clearBtn488,14474
+
+src/style.css,316
+body {body1,0
+li:before {li:before6,45
+#plugin-body {#plugin-body11,93
+sp-heading {sp-heading21,289
+footer {footer25,359
+footer > * {footer > *31,436
+footer div {footer div35,467
+.main-div {.main-div40,520
+.clear-btn {.clear-btn44,557
+.main-div:hover .clear-btn {.main-div:hover .clear-btn52,658
+
+src/types.d.ts,85515
 export declare type premierepro = {premierepro1,0
+export declare type premierepro = {premierepro1,0
+  AppPreference: AppPreferenceStaticAppPreference2,36
+  AudioClipTrackItem: AudioClipTrackItemStaticAudioClipTrackItem3,73
+  AudioComponentChain: AudioComponentChainStaticAudioComponentChain4,120
+  AudioFilterComponent: AudioFilterComponentStaticAudioFilterComponent5,169
+  AudioFilterFactory: AudioFilterFactoryStaticAudioFilterFactory6,220
+  AudioTrack: AudioTrackStaticAudioTrack7,267
+  CaptionTrack: CaptionTrackStaticCaptionTrack8,298
+  ClipProjectItem: ClipProjectItemStaticClipProjectItem9,333
+  EncoderManager: EncoderManagerStaticEncoderManager10,374
+  Exporter: ExporterStaticExporter11,413
+  FolderItem: FolderItemStaticFolderItem12,440
+  FrameRate: FrameRateStaticFrameRate13,471
+  Guid: GuidStaticGuid14,500
+  Keyframe: KeyframeStaticKeyframe15,519
+  Marker: MarkerStaticMarker16,546
+  Markers: MarkersStaticMarkers17,569
+  Metadata: MetadataStaticMetadata18,594
+  OperationCompleteEvent: OperationCompleteEventStaticOperationCompleteEvent19,621
+  Project: ProjectStaticProject20,676
+  ProjectClosedEvent: ProjectClosedEventStaticProjectClosedEvent21,701
+  ProjectEvent: ProjectEventStaticProjectEvent22,748
+  ProjectItem: ProjectItemStaticProjectItem23,783
+  ProjectSettings: ProjectSettingsStaticProjectSettings24,816
+  ProjectUtils: ProjectUtilsStaticProjectUtils25,857
+  Properties: PropertiesStaticProperties26,892
+  ScratchDiskSettings: ScratchDiskSettingsStaticScratchDiskSettings27,923
+  Sequence: SequenceStaticSequence28,972
+  SequenceEditor: SequenceEditorStaticSequenceEditor29,999
+  SequenceSettings: SequenceSettingsStaticSequenceSettings30,1038
+  SequenceUtils: SequenceUtilsStaticSequenceUtils31,1081
+  SnapEvent: SnapEventStaticSnapEvent32,1118
+  SourceMonitor: SourceMonitorStaticSourceMonitor33,1147
+  TextSegments: TextSegmentsStaticTextSegments34,1184
+  TickTime: TickTimeStaticTickTime35,1219
+  TrackItemSelection: TrackItemSelectionStaticTrackItemSelection36,1246
+  TransitionFactory: TransitionFactoryStaticTransitionFactory37,1293
+  UniqueSerializeable: UniqueSerializeableStaticUniqueSerializeable38,1338
+  Utils: UtilsStaticUtils39,1387
+  VideoClipTrackItem: VideoClipTrackItemStaticVideoClipTrackItem40,1408
+  VideoComponentChain: VideoComponentChainStaticVideoComponentChain41,1455
+  VideoFilterComponent: VideoFilterComponentStaticVideoFilterComponent42,1504
+  VideoFilterFactory: VideoFilterFactoryStaticVideoFilterFactory43,1555
+  VideoTrack: VideoTrackStaticVideoTrack44,1602
+  VideoTransition: VideoTransitionStaticVideoTransition45,1633
+  EventManager: EventManagerStaticEventManager46,1674
+  Transcript: TranscriptStaticTranscript47,1709
+  AddTransitionOptions: AddTransitionOptionsAddTransitionOptions48,1740
+  Constants: typeof ConstantsConstants49,1785
+export declare type Action = {Action52,1818
 export declare type Action = {Action52,1818
 export declare type AddTransitionOptions = {AddTransitionOptions55,1852
+export declare type AddTransitionOptions = {AddTransitionOptions55,1852
+  setApplyToStart(applyToStart: boolean): AddTransitionOptions	//Set whether to apply transitionsetApplyToStart57,1924
+  setForceSingleSided(forceSingleSided: boolean): AddTransitionOptions	//Set whether transition setForceSingleSided58,2054
+  setTransitionAlignment(transitionAlignment: number): AddTransitionOptions	//Sets the transitiosetTransitionAlignment59,2186
+  setDuration(tickTime: TickTime): AddTransitionOptions	//Sets the duration of transitionsetDuration60,2311
+  applyToStart: boolean	//Get whether to apply transition to the start or end of trackitemapplyToStart61,2401
+  forceSingleSided: boolean	//Get whether transition should be applied to one/both sidesforceSingleSided62,2492
+  transitionAlignment: number	//Gets the transitionAlignment of transitiontransitionAlignment63,2581
+  duration: TickTime	//Gets the duration of transitionduration64,2656
 export declare type AppPreferenceStatic = {AppPreferenceStatic67,2714
+export declare type AppPreferenceStatic = {AppPreferenceStatic67,2714
+  setValue(key: Constants.PreferenceKey, value: boolean | string | number, persistenceFlag: ConssetValue68,2758
+  getValue(preferenceKey: Constants.PreferenceKey): string	//Get preference value in native strigetValue69,3021
+  KEY_AUTO_PEAK_GENERATION: string	//Preference string key used to modify auto-peak generation sKEY_AUTO_PEAK_GENERATION70,3125
+  KEY_IMPORT_WORKSPACE: string	//Preference string key used to modify import workspace settingsKEY_IMPORT_WORKSPACE71,3229
+  KEY_SHOW_QUICKSTART_DIALOG: string	//Preference string key used to modify show quickstart dialKEY_SHOW_QUICKSTART_DIALOG72,3325
+  PROPERTY_PERSISTENT: number	//Property is persistent in backend and shared across cloud projecPROPERTY_PERSISTENT73,3433
+  PROPERTY_NON_PERSISTENT: number	//Property is not persisted and will be cleared when the projePROPERTY_NON_PERSISTENT74,3532
+export declare type AppPreference = {AppPreference77,3642
 export declare type AppPreference = {AppPreference77,3642
 export declare type Application = {Application80,3683
+export declare type Application = {Application80,3683
+  version: stringversion81,3719
 export declare type AudioClipTrackItemStatic = {AudioClipTrackItemStatic84,3740
+export declare type AudioClipTrackItemStatic = {AudioClipTrackItemStatic84,3740
+  TRACKITEMTYPE_EMPTY: number	//Empty Track Item TypeTRACKITEMTYPE_EMPTY85,3789
+  TRACKITEMTYPE_CLIP: number	//Clip Track Item TypeTRACKITEMTYPE_CLIP86,3843
+  TRACKITEMTYPE_TRANSITION: number	//Transition Track Item TypeTRACKITEMTYPE_TRANSITION87,3895
+  TRACKITEMTYPE_PREVIEW: number	//Previe Track Item TypeTRACKITEMTYPE_PREVIEW88,3959
+  TRACKITEMTYPE_FEEDBACK: number	//Feedback Track Item TypeTRACKITEMTYPE_FEEDBACK89,4016
 export declare type AudioClipTrackItem = {AudioClipTrackItem92,4079
+export declare type AudioClipTrackItem = {AudioClipTrackItem92,4079
+  getMatchName(): Promise<string>	//Returns the value of internal matchname for this trackItemgetMatchName93,4122
+  getName(): Promise<string>	//Returns the display name for trackItemgetName94,4217
+  getIsSelected(): Promise<boolean>	//Returns if trackItem is selected or notgetIsSelected95,4287
+  getSpeed(): Promise<number>	//Returns the value of speed of the trackItemgetSpeed96,4365
+  isAdjustmentLayer(): Promise<boolean>	//Returns true if the trackitem is an adjustment layerisAdjustmentLayer97,4441
+  isSpeedReversed(): Promise<number>	//Returns true if the trackitem is reversedisSpeedReversed98,4536
+  createMoveAction(tickTime: TickTime): Action	//Returns an action that moves the inPoint of thecreateMoveAction99,4617
+  getInPoint(): Promise<TickTime>	//Returns a TickTime object representing the track item in poigetInPoint100,4779
+  getOutPoint(): Promise<TickTime>	//Returns a TickTime object representing the track item out pgetOutPoint101,4956
+  createSetInPointAction(tickTime: TickTime): Action	//Create SetInPointAction for setting the tcreateSetInPointAction102,5135
+  createSetOutPointAction(tickTime: TickTime): Action	//Create SetOutPointAction for setting thecreateSetOutPointAction103,5327
+  getStartTime(): Promise<TickTime>	//Returns a TickTime object representing the starting sequengetStartTime104,5522
+  getEndTime(): Promise<TickTime>	//Returns a TickTime object representing the ending sequence tgetEndTime105,5682
+  createSetStartAction(tickTime: TickTime): Action	//Create set start time action for sequencecreateSetStartAction106,5838
+  createSetEndAction(tickTime: TickTime): Action	//Create set end time action for sequencecreateSetEndAction107,5933
+  getDuration(): Promise<TickTime>	//Returns timecode representing the duration of this track itgetDuration108,6024
+  getType(): Promise<number>	//Index representing the type of this track item.getType109,6155
+  isDisabled(): Promise<boolean>	//Returns true if trackitem is muted/disabledisDisabled110,6234
+  createSetDisabledAction(disabled: boolean): Action	//Returns an action that enables/disables tcreateSetDisabledAction111,6313
+  createSetNameAction(inName: string): Action	//Returns an action that renames the trackItemcreateSetNameAction112,6423
+  getMediaType(): Promise<Guid>	//Returns UUID representing the underlying media type of this trgetMediaType113,6516
+  getTrackIndex(): Promise<number>	//Index representing the track index of the track this track getTrackIndex114,6621
+  getProjectItem(): Promise<ProjectItem>	//Returns the project item for this track item.getProjectItem115,6733
+  getComponentChain(): Promise<AudioComponentChain>	//Returns AudioComponentChaingetComponentChain116,6822
+export declare type AudioComponentChainStatic = {AudioComponentChainStatic119,6907
 export declare type AudioComponentChainStatic = {AudioComponentChainStatic119,6907
 export declare type AudioComponentChain = {AudioComponentChain122,6960
+export declare type AudioComponentChain = {AudioComponentChain122,6960
+  createInsertComponentAction(component: Component | AudioFilterComponent, componentInsertionIndcreateInsertComponentAction123,7004
+  createAppendComponentAction(component: Component | AudioFilterComponent): Action	//Creates andcreateAppendComponentAction124,7169
+  createRemoveComponentAction(component: Component | AudioFilterComponent): Action	//Creates andcreateRemoveComponentAction125,7301
+  getComponentAtIndex(componentIndex: number): Component	//Returns the component at the given ingetComponentAtIndex126,7433
+  getComponentCount(): number	//Gets the number of components in the component chaingetComponentCount127,7533
+export declare type AudioFilterComponentStatic = {AudioFilterComponentStatic130,7621
 export declare type AudioFilterComponentStatic = {AudioFilterComponentStatic130,7621
 export declare type AudioFilterComponent = {AudioFilterComponent133,7675
+export declare type AudioFilterComponent = {AudioFilterComponent133,7675
 export declare type AudioFilterFactoryStatic = {AudioFilterFactoryStatic136,7723
+export declare type AudioFilterFactoryStatic = {AudioFilterFactoryStatic136,7723
+  createComponentByDisplayName(displayName: string, inAudioClipTrackItem: AudioClipTrackItem): PcreateComponentByDisplayName137,7772
+  getDisplayNames(): Promise<string[]>	//Returns an array of audio filter displayNamesgetDisplayNames138,8012
+export declare type AudioFilterFactory = {AudioFilterFactory141,8102
 export declare type AudioFilterFactory = {AudioFilterFactory141,8102
 export declare type AudioTrackStatic = {AudioTrackStatic144,8148
+export declare type AudioTrackStatic = {AudioTrackStatic144,8148
+  EVENT_TRACK_CHANGED: string	//Event Object for Track changedEVENT_TRACK_CHANGED145,8189
+  EVENT_TRACK_INFO_CHANGED: string	//Event Object for Track Info ChangedEVENT_TRACK_INFO_CHANGED146,8252
+  EVENT_TRACK_LOCK_CHANGED: string	//Event Object for Track Lock ChangedEVENT_TRACK_LOCK_CHANGED147,8325
 export declare type AudioTrack = {AudioTrack150,8401
+export declare type AudioTrack = {AudioTrack150,8401
+  setMute(mute: boolean): Promise<boolean>	//sets the mute state of the track to muted/unmutedsetMute151,8436
+  getMediaType(): Promise<Guid>	//UUID representing the underlying media type of this trackgetMediaType152,8531
+  getIndex(): Promise<number>	//Index representing the track index of this track within the tracgetIndex153,8623
+  isMuted(): Promise<boolean>	//Get mute state of the trackisMuted154,8728
+  getTrackItems(trackItemType: Constants.TrackItemType, includeEmptyTrackItems: boolean): AudioCgetTrackItems155,8788
+  name: string	//Get the name of the trackname156,8962
+  id: number	//The ID of the track within the TrackGroupid157,9005
+export declare type CaptionTrackStatic = {CaptionTrackStatic160,9065
 export declare type CaptionTrackStatic = {CaptionTrackStatic160,9065
 export declare type CaptionTrack = {CaptionTrack163,9111
+export declare type CaptionTrack = {CaptionTrack163,9111
+  setMute(mute: boolean): Promise<boolean>	//sets the mute state of the track to muted/unmutedsetMute164,9148
+  getMediaType(): Promise<Guid>	//UUID representing the underlying media type of this trackgetMediaType165,9243
+  getIndex(): Promise<number>	//Index representing the track index of this track within the tracgetIndex166,9335
+  isMuted(): Promise<boolean>	//Get mute state of the trackisMuted167,9440
+  getTrackItems(trackItemType: number, includeEmptyTrackItems: boolean): []	//Returns the track getTrackItems168,9500
+  name: string	//Get the name of the trackname169,9651
+  id: number	//The ID of the track within the TrackGroupid170,9694
 export declare type ClipProjectItemStatic = {ClipProjectItemStatic173,9754
+export declare type ClipProjectItemStatic = {ClipProjectItemStatic173,9754
+  cast(projectItem: ProjectItem): ClipProjectItem	//Cast ProjectItem in to ClipProjectItemcast174,9800
+  TYPE_CLIP: number	//Project item type for clips.TYPE_CLIP175,9891
+  TYPE_BIN: number	//Project item type for bins/folders.TYPE_BIN176,9942
+  TYPE_ROOT: number	//Project item type for the root container.TYPE_ROOT177,9999
+  TYPE_FILE: number	//Project item type for generic files.TYPE_FILE178,10063
+  TYPE_STYLE: number	//Project item type for styles.TYPE_STYLE179,10122
+  TYPE_COMPOUND: number	//Project item type for compound clips.TYPE_COMPOUND180,10175
 export declare type ClipProjectItem = {ClipProjectItem183,10242
+export declare type ClipProjectItem = {ClipProjectItem183,10242
+  getInputLUTID(): Promise<string>	//Get Guid of Input LUT overridden on mediagetInputLUTID184,10282
+  createSetInputLUTIDAction(stringLUTID: string): Action	//Create action for setting Guid of InpcreateSetInputLUTIDAction185,10361
+  isSequence(): Promise<boolean>	//Returns true if the project item is a sequenceisSequence186,10509
+  canChangeMediaPath(): Promise<boolean>	//Returns true if Premiere Pro can change the path assocanChangeMediaPath187,10591
+  isOffline(): Promise<boolean>	//Returns true if the media is offlineisOffline188,10743
+  canProxy(): Promise<boolean>	//Indicates whether it is possible to attach a proxy to this projcanProxy189,10814
+  getProxyPath(): Promise<string>	//Returns the proxy path if the project item has a proxy attacgetProxyPath190,10920
+  hasProxy(): Promise<boolean>	//Indicates whether a proxy has already been attached to the projhasProxy191,11020
+  attachProxy(mediaPath: string, isHiRes: boolean, inMakeAlternateLinkInTeamProjects?: boolean):attachProxy192,11126
+  findItemsMatchingMediaPath(matchString: string, ignoreSubclips?: boolean): Promise<ProjectItemfindItemsMatchingMediaPath193,11343
+  refreshMedia(): Promise<boolean>	//Updates representation of the media associated with the prorefreshMedia194,11519
+  createSetOfflineAction(): Action	//Returns an action which sets the media offlinecreateSetOfflineAction195,11625
+  getFootageInterpretation(): Promise<FootageInterpretation>	//Get the footage interpretation obgetFootageInterpretation196,11709
+  createSetFootageInterpretationAction(footageInterpretation: FootageInterpretation): Action	//ScreateSetFootageInterpretationAction197,11827
+  changeMediaFilePath(newPath: string, overrideCompatibilityCheck?: boolean): Promise<boolean>	/changeMediaFilePath198,11977
+  isMergedClip(): Promise<boolean>	//Returns true if the clip Project item is a merged clipisMergedClip199,12158
+  isMulticamClip(): Promise<boolean>	//Returns true if the clip Project item is a multicam clipisMulticamClip200,12250
+  getEmbeddedLUTID(): Promise<string>	//Get GUID of LUT embedded in mediagetEmbeddedLUTID201,12346
+  createSetScaleToFrameSizeAction(): Action	//Returns an action which sets the scale to frame tocreateSetScaleToFrameSizeAction202,12420
+  createSetNameAction(inName: string): Action	//Returns action that renames projectItemcreateSetNameAction203,12522
+  getColorLabelIndex(): Promise<number>	//Get color label index of projectItemgetColorLabelIndex204,12610
+  createSetColorLabelAction(inColorLabelIndex: number): Action	//Create an action for set color createSetColorLabelAction205,12689
+  getProject(): Promise<Project>	//Get the parent Project of this projectItem.getProject206,12815
+  getContentType(): Promise<Constants.ContentType>	//Get content type of the Project itemgetContentType207,12894
+  getSequence(): Promise<Sequence>	//Get the sequence of the Project itemgetSequence208,12984
+  getInPoint(mediaType: Constants.MediaType): Promise<TickTime>	//Get the in point of the ProjecgetInPoint209,13058
+  getOutPoint(mediaType: Constants.MediaType): Promise<TickTime>	//Get the out point of the ProjgetOutPoint210,13161
+  getMediaFilePath(): Promise<string>	//Get the media file path of the Project item.getMediaFilePath211,13266
+  getComponentChain(mediaType: Constants.MediaType): Promise<string>	//Get the media file path ogetComponentChain212,13351
+  createSetInPointAction(tickTime: TickTime): Action	//Returns an action which Sets the in pointcreateSetInPointAction213,13467
+  createSetOverridePixelAspectRatioAction(inNumerator: number, inDenominator: number): Action	//createSetOverridePixelAspectRatioAction214,13584
+  createSetOverrideFrameRateAction(inOverriddenFrameRateValue: number): Action	//Returns an acticreateSetOverrideFrameRateAction215,13737
+  createSetOutPointAction(tickTime: TickTime): Action	//Returns an action which Sets the in poincreateSetOutPointAction216,13871
+  createSetInOutPointsAction(inPoint: TickTime, outPoint: TickTime): Action	//Set the in or out createSetInOutPointsAction217,13989
+  createClearInOutPointsAction(): Action	//Create Clear the in or out point of the Project item createClearInOutPointsAction218,14111
+  getMedia(): Promise<Media>	//Return media associated with clipProjectItemgetMedia219,14214
+  type: number	//Get the type of the Project Item.type220,14290
+  name: string	//The name of this project item.name221,14341
 export declare type CloseProjectOptions = {CloseProjectOptions224,14392
+export declare type CloseProjectOptions = {CloseProjectOptions224,14392
+  setPromptIfDirty(promptIfDirty: boolean): CloseProjectOptions	//Set whether to prompt if a prosetPromptIfDirty226,14462
+  setShowCancelButton(showCancelButton: boolean): CloseProjectOptions	//Set whether to show the setShowCancelButton227,14594
+  setIsAppBeingPreparedToQuit(isAppBeingPreparedToQuit: boolean): CloseProjectOptions	//Set whetsetIsAppBeingPreparedToQuit228,14726
+  setSaveWorkspace(isAppBeingPreparedToQuit: boolean): CloseProjectOptions	//Set whether to savesetSaveWorkspace229,14889
+  promptIfDirty: boolean	//Get whether a prompt is shown if a project is dirty on project open/cpromptIfDirty230,15033
+  showCancelButton: boolean	//Get whether the cancel button is shown on project open/closeshowCancelButton231,15134
+  isAppBeingPreparedToQuit: boolean	//Get whether the app is prepared to quit when open/closing isAppBeingPreparedToQuit232,15225
+  saveWorkspace: boolean	//Get whether your workspaces are saved when opening/closing a projectsaveWorkspace233,15331
 export declare type Color = {Color236,15430
+export declare type Color = {Color236,15430
+  equals(colorObject: Color): boolean	//Returns true if the given ColorObject is equal to this Cequals238,15531
+  red: number	//Read/Write property to get/set red value of color objectred239,15638
+  green: number	//Read/Write property to get/set green value of color objectgreen240,15711
+  blue: number	//Read/Write property to get/set blue value of color objectblue241,15788
+  alpha: number	//Read/Write property to get/set alpha value of color objectalpha242,15863
 export declare type Component = {Component245,15943
+export declare type Component = {Component245,15943
+  getParam(paramIndex?: number): ComponentParam	//Get a parameter from the component based on thgetParam246,15977
+  getMatchName(): Promise<string>	//Returned Promise will be fullfilled with the value of interngetMatchName247,16191
+  getDisplayName(): Promise<string>	//Returned Promise will be fullfilled with the value of dispgetDisplayName248,16319
+  getParamCount(): number	//Gets the number of param in the componentgetParamCount249,16443
 export declare type ComponentParam = {ComponentParam252,16516
+export declare type ComponentParam = {ComponentParam252,16516
+  createKeyframe(inValue: number | string | boolean | PointF | Color): Keyframe	//Creates and recreateKeyframe253,16555
+  getValueAtTime(time: TickTime): Promise<number | string | boolean | PointF | Color>	//Gets thegetValueAtTime254,16815
+  findNearestKeyframe(inTime: TickTime, outTime: TickTime): Keyframe	//Find sthe nearest key forfindNearestKeyframe255,16955
+  findNextKeyframe(inTime: TickTime): Keyframe	//find the next keyframe for the given timefindNextKeyframe256,17067
+  findPreviousKeyframe(inTime: TickTime): Keyframe	//find the previous keyframe for the given tifindPreviousKeyframe257,17158
+  createRemoveKeyframeAction(inTime: TickTime, UpdateUI?: boolean): Action	//Returns an action wcreateRemoveKeyframeAction258,17257
+  createRemoveKeyframeRangeAction(inTime: TickTime, outTime: TickTime, UpdateUI?: boolean): ActicreateRemoveKeyframeRangeAction259,17392
+  createSetValueAction(inKeyFrame: Keyframe, inSafeForPlayback?: boolean): Action	//Creates and createSetValueAction260,17557
+  createAddKeyframeAction(inKeyFrame: Keyframe): Action	//Creates and returns an action object wcreateAddKeyframeAction261,17745
+  createSetTimeVaryingAction(inTimeVarying: boolean): Action	//Creates and returns an action objcreateSetTimeVaryingAction262,17886
+  getStartValue(): Promise<Keyframe>	//Returned promise will be fullfilled with the start value getStartValue263,18026
+  getKeyframeListAsTickTimes(): TickTime[]	//Get a list of tickTime for the keyframes of this cogetKeyframeListAsTickTimes264,18156
+  getKeyframePtr(time?: TickTime): Keyframe	//Get the Keyframe at the given tickTime postiongetKeyframePtr265,18266
+  isTimeVarying(): boolean	//Returns true if the parameter value varies over time (for the duratisTimeVarying266,18359
+  createSetInterpolationAtKeyframeAction(inTime: TickTime, InterpolationMode: number, UpdateUI?:createSetInterpolationAtKeyframeAction267,18472
+  areKeyframesSupported(): Promise<boolean>	//Returns bool whether keyframes are supported for tareKeyframesSupported268,18670
+  displayName: string	//Returns the display name of the component paramdisplayName269,18790
 export declare type CompoundAction = {CompoundAction272,18865
+export declare type CompoundAction = {CompoundAction272,18865
+  addAction(action: Action): boolean	//Add an action to the compound actionaddAction273,18904
+  empty: boolean	//Is the compound action empty?empty274,18980
 export declare type EncoderManagerStatic = {EncoderManagerStatic277,19032
+export declare type EncoderManagerStatic = {EncoderManagerStatic277,19032
+  getManager(): EncoderManager	//Get the Encoder Manager object.getManager278,19077
+  getExportFileExtension(sequence: Sequence, presetFilePath: string): Promise<string>	//Get the getExportFileExtension279,19142
+  EXPORT_QUEUE_TO_AME: string	//Export type used to queue an export job into the Adobe Media EncEXPORT_QUEUE_TO_AME280,19281
+  EXPORT_QUEUE_TO_APP: string	//Export type used to queue an export job into the app export queuEXPORT_QUEUE_TO_APP281,19395
+  EXPORT_IMMEDIATELY: string	//Export type used to immediately exporting an objectEXPORT_IMMEDIATELY282,19493
+  EVENT_RENDER_COMPLETE: string	//Broadcast when AME is finished renderingEVENT_RENDER_COMPLETE283,19576
+  EVENT_RENDER_ERROR: string	//Broadcast when AME gives back error messageEVENT_RENDER_ERROR284,19651
+  EVENT_RENDER_CANCEL: string	//Broadcast when AME job is canceledEVENT_RENDER_CANCEL285,19726
+  EVENT_RENDER_QUEUE: string	//Broadcast when AME job is queuedEVENT_RENDER_QUEUE286,19793
+  EVENT_RENDER_PROGRESS: string	//Broadcast when AME job is rendering the jobEVENT_RENDER_PROGRESS287,19857
 export declare type EncoderManager = {EncoderManager290,19938
+export declare type EncoderManager = {EncoderManager290,19938
+  exportSequence(sequence: Sequence, exportType: Constants.ExportType, outputFile?: string, presexportSequence291,19977
+  encodeProjectItem(clipProjectItem: ClipProjectItem, outputFile: string, presetFile: string, woencodeProjectItem292,20299
+  encodeFile(filePath: string, outputFile: string, presetFile: string, inPoint: TickTime, outPoiencodeFile293,20533
+  isAMEInstalled: boolean	//Check if AME is installed.isAMEInstalled294,20778
 export declare type ExporterStatic = {ExporterStatic297,20836
+export declare type ExporterStatic = {ExporterStatic297,20836
+  exportSequenceFrame(sequence: Sequence, time: TickTime, filename: string, filepath: string, wiexportSequenceFrame298,20875
+export declare type Exporter = {Exporter301,21112
 export declare type Exporter = {Exporter301,21112
 export declare type FolderItemStatic = {FolderItemStatic304,21148
+export declare type FolderItemStatic = {FolderItemStatic304,21148
+  cast(projectItem: ProjectItem): FolderItem	//Cast ProjectItem in to FolderItemcast305,21189
+  TYPE_CLIP: number	//Project item type for clips.TYPE_CLIP306,21270
+  TYPE_BIN: number	//Project item type for bins/folders.TYPE_BIN307,21321
+  TYPE_ROOT: number	//Project item type for the root container.TYPE_ROOT308,21378
+  TYPE_FILE: number	//Project item type for generic files.TYPE_FILE309,21442
+  TYPE_STYLE: number	//Project item type for styles.TYPE_STYLE310,21501
+  TYPE_COMPOUND: number	//Project item type for compound clips.TYPE_COMPOUND311,21554
 export declare type FolderItem = {FolderItem314,21621
+export declare type FolderItem = {FolderItem314,21621
+  createBinAction(name: string, makeUnique: boolean): Action	//Returns an action that lets userscreateBinAction315,21656
+  createSmartBinAction(name: string, searchQuery: string): Action	//Creates a smart bin with givcreateSmartBinAction316,21771
+  createRenameBinAction(name: string): Action	//Rename the Bin and return true if it's successfucreateRenameBinAction317,21905
+  getItems(): Promise<ProjectItem[]>	//Collection of child items of this folder.getItems318,22003
+  createRemoveItemAction(item: ProjectItem): Action	//Creates an action that removes the given icreateRemoveItemAction319,22084
+  createMoveItemAction(item: ProjectItem, newParent: FolderItem): Action	//Creates an action thacreateMoveItemAction320,22202
+  createSetNameAction(inName: string): Action	//Returns action that renames projectItemcreateSetNameAction321,22360
+  getColorLabelIndex(): Promise<number>	//Get color label index of projectItemgetColorLabelIndex322,22448
+  createSetColorLabelAction(inColorLabelIndex: number): Action	//Create an action for set color createSetColorLabelAction323,22527
+  getProject(): Promise<Project>	//Get the parent Project of this projectItem.getProject324,22653
+  type: number	//Get the type of the Project Item.type325,22732
+  name: string	//The name of this project item.name326,22783
 export declare type FootageInterpretation = {FootageInterpretation329,22834
+export declare type FootageInterpretation = {FootageInterpretation329,22834
+  getFrameRate(): number	//Get frame rate of footagegetFrameRate330,22880
+  setFrameRate(frameRate: number): boolean	//Set frame rate of footagesetFrameRate331,22933
+  getPixelAspectRatio(): number	//Get pixel aspect ratio of footagegetPixelAspectRatio332,23004
+  setPixelAspectRatio(pixelAspectRatio: number): boolean	//Set pixel aspect ratio of footagesetPixelAspectRatio333,23072
+  getFieldType(): number	//Get field type of footagegetFieldType334,23165
+  setFieldType(fieldType: number): boolean	//Set field type of footagesetFieldType335,23218
+  getRemovePullDown(): boolean	//Get removePullDown property of footagegetRemovePullDown336,23289
+  setRemovePullDown(removePulldown: boolean): boolean	//Set removePullDown property of footagesetRemovePullDown337,23361
+  getAlphaUsage(): number	//Get alpha usage type property of footagegetAlphaUsage338,23456
+  setAlphaUsage(alphaUsage: number): boolean	//Set alpha usage type property of footagesetAlphaUsage339,23525
+  getIgnoreAlpha(): boolean	//Get ignore alpha property of footagegetIgnoreAlpha340,23613
+  setIgnoreAlpha(ignoreAlpha: boolean): boolean	//Set ignore alpha property of footagesetIgnoreAlpha341,23680
+  getInvertAlpha(): boolean	//Get invert alpha property of footagegetInvertAlpha342,23767
+  setInvertAlpha(invertAlpha: boolean): boolean	//Set invert alpha property of footagesetInvertAlpha343,23834
+  getVrConform(): number	//Get vr conform projection type of footagegetVrConform344,23921
+  setVrConform(vrConform: number): boolean	//Set vr conform projection type of footagesetVrConform345,23990
+  getVrLayout(): number	//Get vr layout type of footagegetVrLayout346,24077
+  setVrLayout(vrLayOut: number): boolean	//Set vr layout type of footagesetVrLayout347,24133
+  getVrHorzView(): number	//Get vr horizontal view of footagegetVrHorzView348,24206
+  setVrHorzView(vrHorzView: number): boolean	//Set vr horizontal view of footagesetVrHorzView349,24268
+  getVrVertView(): number	//Get vr vertical view of footagegetVrVertView350,24349
+  setVrVertView(vrVertView: number): boolean	//Set vr horizontal view of footagesetVrVertView351,24409
+  getInputLUTID(): string	//Get input LUTID of footagegetInputLUTID352,24490
+  setInputLUTID(inputLUTID: string): boolean	//Set input LUTID of footagesetInputLUTID353,24545
+  ALPHACHANNEL_NONE: number	//alpha channel noneALPHACHANNEL_NONE354,24619
+  ALPHACHANNEL_STRAIGHT: number	//alpha channel straightALPHACHANNEL_STRAIGHT355,24668
+  ALPHACHANNEL_PREMULTIPLIED: number	//alpha channel premultipliedALPHACHANNEL_PREMULTIPLIED356,24725
+  ALPHACHANNEL_IGNORE: number	//alpha channel ignoreALPHACHANNEL_IGNORE357,24792
+  FIELD_TYPE_DEFAULT: number	//default filed type invalidFIELD_TYPE_DEFAULT358,24845
+  FIELD_TYPE_PROGRESSIVE: number	//field type progressiveFIELD_TYPE_PROGRESSIVE359,24903
+  FIELD_TYPE_UPPERFIRST: number	//field type upperfirstFIELD_TYPE_UPPERFIRST360,24961
+  FIELD_TYPE_LOWERFIRST: number	//field type lowerfirstFIELD_TYPE_LOWERFIRST361,25017
 export declare type FrameRateStatic = {FrameRateStatic364,25076
+export declare type FrameRateStatic = {FrameRateStatic364,25076
+  createWithValue(value: number): FrameRate	//Create frame rate object with a valuecreateWithValue365,25116
 export declare type FrameRate = {FrameRate368,25203
+export declare type FrameRate = {FrameRate368,25203
+  equals(frameRate: FrameRate): boolean	//Returns true if the given FrameRate is equal to this Fequals370,25253
+  ticksPerFrame: number	//Read/Write property to get/set ticks per frame.ticksPerFrame371,25365
+  value: number	//Get the number of frames per second.value372,25439
 export declare type GuidStatic = {GuidStatic375,25497
+export declare type GuidStatic = {GuidStatic375,25497
+  fromString(stringValue: string): Guid	//Create a guid from a stringfromString376,25532
 export declare type Guid = {Guid379,25605
+export declare type Guid = {Guid379,25605
+  toString(): string	//Return string representation of the GUIDtoString381,25645
 export declare type IngestSettings = {IngestSettings384,25712
+export declare type IngestSettings = {IngestSettings384,25712
+  getIsIngestEnabled(): Promise<boolean>	//Get whether or not ingest is enabledgetIsIngestEnabled385,25751
+  setIngestEnabled(enabled: boolean): Promise<boolean>	//Set whether or not ingest is enabledsetIngestEnabled386,25831
 export declare type KeyframeStatic = {KeyframeStatic389,25928
+export declare type KeyframeStatic = {KeyframeStatic389,25928
+  INTERPOLATION_MODE_LINEAR: number	//Linear interpolation modeINTERPOLATION_MODE_LINEAR390,25967
+  INTERPOLATION_MODE_HOLD: number	//Hold interpolation modeINTERPOLATION_MODE_HOLD391,26031
+  INTERPOLATION_MODE_BEZIER: number	//Bezier interpolation modeINTERPOLATION_MODE_BEZIER392,26091
+  INTERPOLATION_MODE_TIME: number	//Time interpolation modeINTERPOLATION_MODE_TIME393,26155
+  INTERPOLATION_MODE_TIME_TRANSITION_START: number	//Time transition start interpolation modeINTERPOLATION_MODE_TIME_TRANSITION_START394,26215
+  INTERPOLATION_MODE_TIME_TRANSITION_END: number	//Time transition end interpolation modeINTERPOLATION_MODE_TIME_TRANSITION_END395,26309
 export declare type Keyframe = {Keyframe398,26402
+export declare type Keyframe = {Keyframe398,26402
+  getTemporalInterpolationMode(): Promise<number>	//Gets temporal interpolation mode of a keyfragetTemporalInterpolationMode399,26435
+  setTemporalInterpolationMode(temporalInterpolationMode: number): Promise<boolean>	//Sets temposetTemporalInterpolationMode400,26534
+  value: {value: string | number | boolean | Color | PointF}value401,26667
+  position: TickTime	//Get/Set position of a keyframeposition402,26728
 export declare type MarkerStatic = {MarkerStatic405,26785
+export declare type MarkerStatic = {MarkerStatic405,26785
+  MARKER_TYPE_COMMENT: string	//Marker Type: CommentMARKER_TYPE_COMMENT406,26822
+  MARKER_TYPE_CHAPTER: string	//Marker Type: ChapterMARKER_TYPE_CHAPTER407,26875
+  MARKER_TYPE_FLVCUEPOINT: string	//Marker Type: FLVCuePointMARKER_TYPE_FLVCUEPOINT408,26928
+  MARKER_TYPE_WEBLINK: string	//Marker Type: WebLinkMARKER_TYPE_WEBLINK409,26989
 export declare type Marker = {Marker412,27045
+export declare type Marker = {Marker412,27045
+  getColor(): Color	//Get color code of the marker.getColor413,27076
+  getColorIndex(): number	//Get color index of the marker.getColorIndex414,27128
+  getComments(): string	//Get comments of the marker.getComments415,27187
+  getDuration(): TickTime	//Get duration time of the marker.getDuration416,27241
+  getName(): string	//Get name of the marker.getName417,27302
+  getUrl(): string	//Get url of the marker.getUrl418,27348
+  getTarget(): string	//Get target of the marker. Used together with url for web targets.getTarget419,27392
+  getType(): string	//Get type of the marker. e.g. Cue / Track / Subclip / CartgetType420,27482
+  getStart(): TickTime	//Get start time of the marker.getStart421,27562
+  createSetColorByIndexAction(colorIndex: number): Action	//Return an action to set the color ofcreateSetColorByIndexAction422,27617
+  createSetNameAction(name: string): Action	//Return an action to set the name of the marker.createSetNameAction423,27744
+  createSetDurationAction(tickTime: TickTime): Action	//Return an action to set the duration of createSetDurationAction424,27838
+  createSetTypeAction(markerType: string): Action	//Return an action to set the type of the markcreateSetTypeAction425,27946
+  createSetCommentsAction(comments: string): Action	//Return an action to set the comments of thcreateSetCommentsAction426,28046
 export declare type MarkersStatic = {MarkersStatic429,28155
+export declare type MarkersStatic = {MarkersStatic429,28155
+  getMarkers(markerOwnerObject: Sequence | ClipProjectItem): Promise<Markers>	//Returns the MarkgetMarkers430,28193
 export declare type Markers = {Markers433,28331
+export declare type Markers = {Markers433,28331
+  getMarkers(filters?: string[]): Marker[]	//Get all markersgetMarkers434,28363
+  createRemoveMarkerAction(marker: Marker): Action	//Remove the given markercreateRemoveMarkerAction435,28424
+  createMoveMarkerAction(marker: Marker, tickTime: TickTime): Action	//Move the given marker at createMoveMarkerAction436,28501
+  createAddMarkerAction(Name: string, markerType?: string, startTime?: TickTime, duration?: TickcreateAddMarkerAction437,28612
 export declare type Media = {Media440,28763
+export declare type Media = {Media440,28763
+  createSetStartAction(time: TickTime): Action	//Returns action that set start of mediacreateSetStartAction441,28793
+  start: TickTime	//Get the media start timestart442,28881
+  duration: TickTime	//Get the media durationduration443,28926
 export declare type MetadataStatic = {MetadataStatic446,28975
+export declare type MetadataStatic = {MetadataStatic446,28975
+  getProjectMetadata(projectItem: ProjectItem): Promise<string>	//Get project metadatagetProjectMetadata447,29014
+  getXMPMetadata(projectItem: ProjectItem): Promise<string>	//Get project XMP metadatagetXMPMetadata448,29101
+  createSetProjectMetadataAction(projectItem: ProjectItem, metadata: string, updatedFields: stricreateSetProjectMetadataAction449,29188
+  createSetXMPMetadataAction(projectItem: ProjectItem, metadata: string): Action	//Get set projecreateSetXMPMetadataAction450,29332
+  addPropertyToProjectMetadataSchema(name: string, label: string, type: number): Promise<booleanaddPropertyToProjectMetadataSchema451,29451
+  getProjectColumnsMetadata(projectItem: ProjectItem): Promise<string>	//Get project column metagetProjectColumnsMetadata452,29606
+  getProjectPanelMetadata(): Promise<string>	//Get project panel metadatagetProjectPanelMetadata453,29725
+  setProjectPanelMetadata(metadata: string): Promise<boolean>	//Set project panel metadatasetProjectPanelMetadata454,29799
+  METADATA_TYPE_INTEGER: number	//Metadata Type: INTEGERMETADATA_TYPE_INTEGER455,29890
+  METADATA_TYPE_REAL: number	//Metadata Type: REALMETADATA_TYPE_REAL456,29947
+  METADATA_TYPE_TEXT: number	//Metadata Type: TEXTMETADATA_TYPE_TEXT457,29998
+  METADATA_TYPE_BOOLEAN: number	//Metadata Type: BOOLEANMETADATA_TYPE_BOOLEAN458,30049
+export declare type Metadata = {Metadata461,30109
 export declare type Metadata = {Metadata461,30109
 export declare type OpenProjectOptions = {OpenProjectOptions464,30145
+export declare type OpenProjectOptions = {OpenProjectOptions464,30145
+  setShowConvertProjectDialog(showConvertProjectDialog: boolean): OpenProjectOptions	//Set whethsetShowConvertProjectDialog465,30188
+  setShowLocateFileDialog(showLocateFileDialog: boolean): OpenProjectOptions	//Set whether to shsetShowLocateFileDialog466,30344
+  setShowWarningDialog(showConvertProjectDialog: boolean): OpenProjectOptions	//Set whether to ssetShowWarningDialog467,30488
+  setAddToMRUList(addToMRUList: boolean): OpenProjectOptions	//Set whether to add to MRU list afsetAddToMRUList468,30634
+  showConvertProjectDialog: boolean	//Get whether the convert project dialog is shown on projectshowConvertProjectDialog469,30750
+  showLocateFileDialog: boolean	//Get whether locate file dialog is shown on project open/closeshowLocateFileDialog470,30858
+  showWarningDialog: boolean	//Get whether the warning file dialog is shown on project open/closshowWarningDialog471,30954
+  addToMRUList: boolean	//Get whether to add project changes to MRU listaddToMRUList472,31052
 export declare type OperationCompleteEventStatic = {OperationCompleteEventStatic475,31128
+export declare type OperationCompleteEventStatic = {OperationCompleteEventStatic475,31128
+  OPERATION_STATE_SUCCESS: number	//Represents the state when an operation completes successfullOPERATION_STATE_SUCCESS476,31181
+  OPERATION_STATE_CANCELLED: number	//Represents the state when an operation is cancelled.OPERATION_STATE_CANCELLED477,31280
+  OPERATION_STATE_FAILED: number	//Represents the state when an operation is failed.OPERATION_STATE_FAILED478,31371
+  EVENT_IMPORT_MEDIA_COMPLETE: string	//Event occurs when a media import operation is complete.EVENT_IMPORT_MEDIA_COMPLETE479,31456
+  EVENT_EXPORT_MEDIA_COMPLETE: string	//Event occurs when a media export operation is complete.EVENT_EXPORT_MEDIA_COMPLETE480,31552
+  EVENT_EFFECT_DROP_COMPLETE: string	//Event occurs when an effect is dropped on a trackitemEVENT_EFFECT_DROP_COMPLETE481,31648
+  EVENT_EFFECT_DRAG_OVER: string	//Event occurs when an effect is drag over a trackitemEVENT_EFFECT_DRAG_OVER482,31741
+  EVENT_CLIP_EXTEND_REACHED: string	//Event occurs when a clip reached its maximum extend limit.EVENT_CLIP_EXTEND_REACHED483,31829
+  EVENT_GENERATIVE_EXTEND_COMPLETE: string	//Event occurs when a generative extend operation is EVENT_GENERATIVE_EXTEND_COMPLETE484,31926
 export declare type OperationCompleteEvent = {OperationCompleteEvent487,32035
+export declare type OperationCompleteEvent = {OperationCompleteEvent487,32035
+  state: number	//Indicates the outcome of a completed operation: Success, Cancelled, or Failed.state488,32082
 export declare type PointF = {PointF491,32182
+export declare type PointF = {PointF491,32182
+  distanceTo(point: PointF): number	//Get the distance from one point to another pointdistanceTo493,32248
+  x: number	//Get/Set the x value of a pointx494,32335
+  y: number	//Get/Set the y value of a pointy495,32380
 export declare type PointKeyframe = {PointKeyframe498,32428
+export declare type PointKeyframe = {PointKeyframe498,32428
+  value: {value: PointF}value499,32466
+  position: TickTime	//Get/Set position of a keyframeposition500,32491
 export declare type ProjectStatic = {ProjectStatic503,32548
+export declare type ProjectStatic = {ProjectStatic503,32548
+  createProject(path: string): Promise<Project>	//Create a new projectcreateProject504,32586
+  open(path: string, openProjectOptions?: OpenProjectOptions): Promise<Project>	//Open a projectopen505,32657
+  getActiveProject(): Promise<Project>	//Currently active project.getActiveProject506,32754
+  getProject(projectGuid: Guid): Project	//Get project referenced by given UIDgetProject507,32821
 export declare type Project = {Project510,32903
+export declare type Project = {Project510,32903
+  getActiveSequence(): Promise<Sequence>	//Get the active sequence of the projectgetActiveSequence511,32935
+  setActiveSequence(sequence: Sequence): Promise<boolean>	//Set the active sequence of the projesetActiveSequence512,33017
+  createSequence(name: string, presetPath?: string): Promise<Sequence>	//Create a new sequence wcreateSequence513,33116
+  createSequenceFromMedia(name: string, clipProjectItems?: ClipProjectItem[], targetBin?: ProjeccreateSequenceFromMedia514,33321
+  getColorSettings(): Promise<ProjectColorSettings>	//Get project color settings objectgetColorSettings515,33496
+  deleteSequence(sequence: Sequence): Promise<boolean>	//Delete a given sequence from the projecdeleteSequence516,33584
+  getInsertionBin(): Promise<ProjectItem>	//Get current insertion bingetInsertionBin517,33682
+  openSequence(sequence: Sequence): Promise<boolean>	//Open a sequence and return true if succesopenSequence518,33752
+  importSequences(projectPath: string, sequenceIds?: Guid[]): Promise<boolean>importSequences519,33854
+  importAEComps(aepPath: string, compNames: string[], TargetBin?: ProjectItem): Promise<boolean>importAEComps520,33933
+  importAllAEComps(aepPath: string, TargetBin?: ProjectItem): Promise<boolean>importAllAEComps521,34030
+  importFiles(filePaths: string[], suppressUI?: boolean, targetBin?: ProjectItem, asNumberedStilimportFiles522,34109
+  close(closeProjectOptions?: CloseProjectOptions): Promise<boolean>	//Close a projectclose523,34286
+  save(): Promise<boolean>	//Save the projectsave524,34373
+  saveAs(path: string): Promise<boolean>	//Save the project at the provided pathsaveAs525,34419
+  getSequence(guid: Guid): Sequence	//Get sequence by id from the projectgetSequence526,34500
+  getSequences(): Promise<Sequence[]>	//Get an array of all sequences in this project.getSequences527,34574
+  getRootItem(): Promise<FolderItem>	//The root item of the project which contains all items of getRootItem528,34661
+  pauseGrowing(pause: boolean): Promise<boolean>	//Pause growing of files instead swap the filespauseGrowing529,34790
+  executeTransaction(callback: (compoundAction: CompoundAction) => void, undoString?: string): bexecuteTransaction530,34887
+  lockedAccess(callback: () => void): void	//Get a read/upgrade locked access to Project, projeclockedAccess531,35048
+  guid: Guid	//The unique identifier of the project.guid532,35267
+  name: string	//The project name.name533,35320
+  path: string	//The absolute file path to the project file.path534,35355
 export declare type ProjectClosedEventStatic = {ProjectClosedEventStatic537,35419
+export declare type ProjectClosedEventStatic = {ProjectClosedEventStatic537,35419
+  EVENT_CLOSED: string	//Event occurs when project was closed.EVENT_CLOSED538,35468
 export declare type ProjectClosedEvent = {ProjectClosedEvent541,35534
+export declare type ProjectClosedEvent = {ProjectClosedEvent541,35534
+  name: string	//The project name.name542,35577
+  path: string	//The absolute file path to the project file.path543,35612
+  id: string	//The unique identifier of the project.id544,35673
 export declare type ProjectColorSettings = {ProjectColorSettings547,35729
+export declare type ProjectColorSettings = {ProjectColorSettings547,35729
+  getSupportedGraphicsWhiteLuminances(): Promise<number[]>	//Get all the graphics white luminancgetSupportedGraphicsWhiteLuminances548,35774
+  getGraphicsWhiteLuminance(): Promise<number>	//Get the graphics white luminance valuegetGraphicsWhiteLuminance549,35891
 export declare type ProjectEventStatic = {ProjectEventStatic552,35982
+export declare type ProjectEventStatic = {ProjectEventStatic552,35982
+  EVENT_OPENED: string	//Event occurs when project was opened.EVENT_OPENED553,36025
+  EVENT_ACTIVATED: string	//Event occurs when the active project has changedEVENT_ACTIVATED554,36088
+  EVENT_DIRTY: string	//Event occurs when the project dirty state changed.EVENT_DIRTY555,36165
 export declare type ProjectEvent = {ProjectEvent558,36243
+export declare type ProjectEvent = {ProjectEvent558,36243
+  name: string	//The project name.name559,36280
+  path: string	//The absolute file path to the project file.path560,36315
+  id: string	//The unique identifier of the project.id561,36376
+  project: Project	//The project object.project562,36429
 export declare type ProjectItemStatic = {ProjectItemStatic565,36473
+export declare type ProjectItemStatic = {ProjectItemStatic565,36473
+  cast(item: FolderItem | ClipProjectItem): ProjectItem	//Cast FolderItem or ClipProjectItem in cast566,36515
+  TYPE_CLIP: number	//Project item type for clips.TYPE_CLIP567,36626
+  TYPE_BIN: number	//Project item type for bins/folders.TYPE_BIN568,36677
+  TYPE_ROOT: number	//Project item type for the root container.TYPE_ROOT569,36734
+  TYPE_FILE: number	//Project item type for generic files.TYPE_FILE570,36798
+  TYPE_STYLE: number	//Project item type for styles.TYPE_STYLE571,36857
+  TYPE_COMPOUND: number	//Project item type for compound clips.TYPE_COMPOUND572,36910
 export declare type ProjectItem = {ProjectItem575,36977
+export declare type ProjectItem = {ProjectItem575,36977
+  createSetNameAction(inName: string): Action	//Returns action that renames projectItemcreateSetNameAction576,37013
+  getColorLabelIndex(): Promise<number>	//Get color label index of projectItemgetColorLabelIndex577,37101
+  createSetColorLabelAction(inColorLabelIndex: number): Action	//Create an action for set color createSetColorLabelAction578,37180
+  getProject(): Promise<Project>	//Get the parent Project of this projectItem.getProject579,37306
+  getId(): string	//Get id of projectItemgetId580,37385
+  getParentBin(): FolderItem	//Get parent FolderItem of projectItemgetParentBin581,37427
+  type: number	//Get the type of the Project Item.type582,37495
+  name: string	//The name of this project item.name583,37546
 export declare type ProjectItemSelection = {ProjectItemSelection586,37597
+export declare type ProjectItemSelection = {ProjectItemSelection586,37597
+  getItems(): Promise<ProjectItem[]>	//Get the project items that is represented by this selectigetItems587,37642
 export declare type ProjectSettingsStatic = {ProjectSettingsStatic590,37745
+export declare type ProjectSettingsStatic = {ProjectSettingsStatic590,37745
+  createSetScratchDiskSettingsAction(project: Project, scratchDiskSettings: ScratchDiskSettings)createSetScratchDiskSettingsAction591,37791
+  getScratchDiskSettings(project: Project): Promise<ScratchDiskSettings>	//Returns project ScratgetScratchDiskSettings592,37946
+  getIngestSettings(project: Project): Promise<IngestSettings>	//Returns project ingest settingsgetIngestSettings593,38057
+  createSetIngestSettingsAction(project: Project, ingestSettings: IngestSettings): Action	//RetucreateSetIngestSettingsAction594,38154
+export declare type ProjectSettings = {ProjectSettings597,38293
 export declare type ProjectSettings = {ProjectSettings597,38293
 export declare type ProjectUtilsStatic = {ProjectUtilsStatic600,38336
+export declare type ProjectUtilsStatic = {ProjectUtilsStatic600,38336
+  getSelection(project: Project): Promise<ProjectItemSelection>	//Get array of selected project getSelection601,38379
+  getProjectViewIds(): Promise<Guid[]>	//Get array of project view idsgetProjectViewIds602,38497
+  getProjectFromViewId(guid: Guid): Promise<Project>	//Get project based on input view guidgetProjectFromViewId603,38568
+  getSelectionFromViewId(guid: Guid): Promise<ProjectItemSelection>	//Get array of selected projgetSelectionFromViewId604,38660
+export declare type ProjectUtils = {ProjectUtils607,38792
 export declare type ProjectUtils = {ProjectUtils607,38792
 export declare type PropertiesStatic = {PropertiesStatic610,38832
+export declare type PropertiesStatic = {PropertiesStatic610,38832
+  getProperties(propertyOwnerObject: Project | Sequence): Promise<Properties>	//Return Property getProperties611,38873
+  PROPERTY_PERSISTENT: number	//Property is persistent in backend and shared across cloud projecPROPERTY_PERSISTENT612,38982
+  PROPERTY_NON_PERSISTENT: number	//Property is not persisted and will be cleared when the projePROPERTY_NON_PERSISTENT613,39081
 export declare type Properties = {Properties616,39191
+export declare type Properties = {Properties616,39191
+  getValueAsInt(name: string): number	//Get named value as integer numbergetValueAsInt617,39226
+  getValueAsFloat(name: string): number	//Get named value as float numbergetValueAsFloat618,39300
+  getValueAsBool(name: string): boolean	//Get named value as booleangetValueAsBool619,39374
+  getValue(name: string): string	//Get named value in native string formgetValue620,39443
+  createSetValueAction(name: string, value: boolean | string | number, persistenceFlag: ConstantcreateSetValueAction621,39516
+  hasValue(name: string): boolean	//Check if a named value exists under this name.hasValue622,39890
+  createClearValueAction(name: string): Action	//Create an action to clear the value with the gicreateClearValueAction623,39973
 export declare type RectF = {RectF626,40197
+export declare type RectF = {RectF626,40197
+  width: number	//Get/Set the width of a rectwidth628,40239
+  height: number	//Get/Set the height of a rectheight629,40285
 export declare type ScratchDiskSettingsStatic = {ScratchDiskSettingsStatic632,40336
+export declare type ScratchDiskSettingsStatic = {ScratchDiskSettingsStatic632,40336
+  FOLDERTYPE_CAPTURE: string	//Folder Type: CAPTUREDFOLDERTYPE_CAPTURE633,40386
+  FOLDERTYPE_VIDEO_PREVIEW: string	//Folder Type: VIDEOPREVIEWFOLDERTYPE_VIDEO_PREVIEW634,40439
+  FOLDERTYPE_AUDIO_PREVIEW: string	//Folder Type: AUDIOPREVIEWFOLDERTYPE_AUDIO_PREVIEW635,40502
+  FOLDERTYPE_AUTO_SAVE: string	//Folder Type: AUTOSAVEFOLDERTYPE_AUTO_SAVE636,40565
+  FOLDERTYPE_CCL_LIBRARIES: string	//Folder Type: CCLLIBRARIESFOLDERTYPE_CCL_LIBRARIES637,40620
+  FOLDERTYPE_CAPSULE_MEDIA: string	//Folder Type: CAPSULEMEDIAFOLDERTYPE_CAPSULE_MEDIA638,40683
+  FOLDER_SAME_AS_PROJECT: string	//Folder: SAMEASPROJECTFOLDER_SAME_AS_PROJECT639,40746
+  FOLDER_MY_DOCUMNETS: string	//Folder: MYDOCUMNETSFOLDER_MY_DOCUMNETS640,40803
 export declare type ScratchDiskSettings = {ScratchDiskSettings643,40858
+export declare type ScratchDiskSettings = {ScratchDiskSettings643,40858
+  setScratchDiskPath(ScratchDiskType: Constants.ScratchDiskFolderType, ScratchDiskValue: ConstansetScratchDiskPath644,40902
+  getScratchDiskPath(ScratchDiskType: Constants.ScratchDiskFolderType): string	//Gets the scratcgetScratchDiskPath645,41061
+export declare type SequenceStatic = {SequenceStatic648,41263
 export declare type SequenceStatic = {SequenceStatic648,41263
 export declare type Sequence = {Sequence651,41305
+export declare type Sequence = {Sequence651,41305
+  getSequenceVideoTimeDisplayFormat(): Promise<TimeDisplay>	//Get video time display format of tgetSequenceVideoTimeDisplayFormat652,41338
+  getSequenceAudioTimeDisplayFormat(): Promise<TimeDisplay>	//Get audio time display format of tgetSequenceAudioTimeDisplayFormat653,41447
+  getPlayerPosition(): Promise<TickTime>	//Get the player's current positiongetPlayerPosition654,41556
+  setPlayerPosition(positionTime?: TickTime): Promise<boolean>	//Set the player's current positisetPlayerPosition655,41633
+  clearSelection(): Promise<boolean>	//Clears TrackItem SelectionclearSelection656,41732
+  setSelection(trackItemSelection: TrackItemSelection): Promise<boolean>	//Updates sequence selesetSelection657,41798
+  getVideoTrackCount(): Promise<number>	//Get video track count from this sequencegetVideoTrackCount658,41938
+  getAudioTrackCount(): Promise<number>	//Get audio track count from this sequencegetAudioTrackCount659,42021
+  getCaptionTrackCount(): Promise<number>	//Get caption track count from this sequencegetCaptionTrackCount660,42104
+  getVideoTrack(trackIndex: number): Promise<VideoTrack>	//Get video track from track indexgetVideoTrack661,42191
+  getAudioTrack(trackIndex: number): Promise<AudioTrack>	//Get audio track from track indexgetAudioTrack662,42283
+  getCaptionTrack(trackIndex: number): Promise<CaptionTrack>	//Get caption track from track indegetCaptionTrack663,42375
+  getSettings(): Promise<SequenceSettings>	//Get sequence settings objectgetSettings664,42473
+  createSetSettingsAction(sequenceSettings: SequenceSettings): Action	//Returns action that set createSetSettingsAction665,42547
+  createCloneAction(): Action	//Creates an action to clone the given sequencecreateCloneAction666,42661
+  createSubsequence(ignoreTrackTargeting?: boolean): Promise<Sequence>	//Returns a new sequence,createSubsequence667,42739
+  isDoneAnalyzingForVideoEffects(): Promise<boolean>	//Returns whether or not the sequence is doisDoneAnalyzingForVideoEffects668,42885
+  getZeroPoint(): Promise<TickTime>	//Time representing the zero point of the sequence.getZeroPoint669,43012
+  getEndTime(): Promise<TickTime>	//Time representing the end of the sequencegetEndTime670,43100
+  getInPoint(): Promise<TickTime>	//Get time representing the inPoint of sequence.getInPoint671,43178
+  getOutPoint(): Promise<TickTime>	//Get time representing the inPoint of sequence.getOutPoint672,43261
+  createSetInPointAction(tickTime: TickTime): Action	//Create SetInPointAction for sequencecreateSetInPointAction673,43345
+  createSetZeroPointAction(tickTime: TickTime): Action	//Create an action to set an InPoint for createSetZeroPointAction674,43437
+  createSetOutPointAction(tickTime: TickTime): Action	//Create SetOutPointAction for sequencecreateSetOutPointAction675,43546
+  getProjectItem(): Promise<ProjectItem>	//Get the associated projectItem of the sequence.getProjectItem676,43640
+  getSelection(): Promise<TrackItemSelection>	//Returns the current selection group of the sequegetSelection677,43731
+  getFrameSize(): Promise<RectF>	//Gets the size of the framegetFrameSize678,43832
+  getTimebase(): Promise<string>	//Gets the time base of sequencegetTimebase679,43894
+  guid: Guid	//The unique identifier of the sequence.guid680,43960
+  name: string	//The sequence name.name681,44014
 export declare type SequenceEditorStatic = {SequenceEditorStatic684,44053
+export declare type SequenceEditorStatic = {SequenceEditorStatic684,44053
+  getEditor(sequenceObject: Sequence): SequenceEditor	//Get Sequence Editor reference for editingetEditor685,44098
+  getInstalledMogrtPath(): Promise<string>	//Get local directory path to adobe mogrt filesgetInstalledMogrtPath686,44218
 export declare type SequenceEditor = {SequenceEditor689,44312
+export declare type SequenceEditor = {SequenceEditor689,44312
+  createRemoveItemsAction(trackItemSelection: TrackItemSelection, ripple: boolean, mediaType: CocreateRemoveItemsAction690,44351
+  createInsertProjectItemAction(projectItem: ProjectItem, time: TickTime, videoTrackIndex: numbecreateInsertProjectItemAction691,44538
+  createOverwriteItemAction(projectItem: ProjectItem, time: TickTime, videoTrackIndex: number, acreateOverwriteItemAction692,44740
+  createCloneTrackItemAction(trackItem: VideoClipTrackItem | AudioClipTrackItem, timeOffset: TiccreateCloneTrackItemAction693,44920
+  insertMogrtFromPath(inMGTPath: string, inTime: TickTime, inVideoTrackIndex: number, inAudioTrainsertMogrtFromPath694,45343
+  insertMogrtFromLibrary(inLibraryName: string, inElementName: string, inTime: TickTime, inVideoinsertMogrtFromLibrary695,45562
 export declare type SequenceSettingsStatic = {SequenceSettingsStatic698,45814
+export declare type SequenceSettingsStatic = {SequenceSettingsStatic698,45814
+  PAR_SQUARE: string	//Square Pixels (1.0)PAR_SQUARE699,45861
+  PAR_DVNTSC: string	//DV NTSC (0.9091)PAR_DVNTSC700,45904
+  PAR_DVNTSCWide: string	//DV NTSC Widescreen 16:9 (1.2121)PAR_DVNTSCWide701,45944
+  PAR_DVPAL: string	//DV PAL (1.0940)PAR_DVPAL702,46004
+  PAR_DVPALWide: string	//DV PAL Widescreen 16:9 (1.4587)PAR_DVPALWide703,46042
+  PAR_Anamorphic: string	//Anamorphic 2:1 (2.0)PAR_Anamorphic704,46100
+  PAR_HDAnamorphic1080: string	//HD Anamorphic 1080 (1.333)PAR_HDAnamorphic1080705,46148
+  PAR_DVCProHD: string	//DVCPRO HD (1.5)PAR_DVCProHD706,46208
+  VIDEO_FIELDTYPE_PROGRESSIVE: number	//Video field type progressiveVIDEO_FIELDTYPE_PROGRESSIVE707,46249
+  VIDEO_FIELDTYPE_UPPER_FIRST: number	//Video field type upper firstVIDEO_FIELDTYPE_UPPER_FIRST708,46318
+  VIDEO_FIELDTYPE_LOWER_FIRST: number	//Video field type lower firstVIDEO_FIELDTYPE_LOWER_FIRST709,46387
+  VIDEO_DISPLAY_FORMAT_23976: number	//23.976 fps TimeCodeVIDEO_DISPLAY_FORMAT_23976710,46456
+  VIDEO_DISPLAY_FORMAT_25: number	//25 fps TimeCodeVIDEO_DISPLAY_FORMAT_25711,46515
+  VIDEO_DISPLAY_FORMAT_2997: number	//29.97 fps TimeCodeVIDEO_DISPLAY_FORMAT_2997712,46567
+  VIDEO_DISPLAY_FORMAT_2997_NON_DROP: number	//29.97 fps Non-Drop-Frame TimeCodeVIDEO_DISPLAY_FORMAT_2997_NON_DROP713,46624
+  VIDEO_DISPLAY_FORMAT_16mm: number	//Feet+Frame 16mmVIDEO_DISPLAY_FORMAT_16mm714,46705
+  VIDEO_DISPLAY_FORMAT_35mm: number	//Feet+Frame 35mmVIDEO_DISPLAY_FORMAT_35mm715,46759
+  VIDEO_DISPLAY_FORMAT_FRAMES: number	//FramesVIDEO_DISPLAY_FORMAT_FRAMES716,46813
+  AUDIO_CHANNEL_TYPE_MONO: number	//Audio Channel Type MonoAUDIO_CHANNEL_TYPE_MONO717,46860
+  AUDIO_CHANNEL_TYPE_STEREO: number	//Audio Channel Type StereoAUDIO_CHANNEL_TYPE_STEREO718,46920
+  AUDIO_CHANNEL_TYPE_51: number	//Audio Channel Type 5.1AUDIO_CHANNEL_TYPE_51719,46984
+  AUDIO_CHANNEL_TYPE_MULTI: number	//Audio Channel Type MultiAUDIO_CHANNEL_TYPE_MULTI720,47041
+  AUDIO_DISPLAY_FORMAT_SAMPLE_RATE: number	//Audio Display format: Audio Sample TimecodeAUDIO_DISPLAY_FORMAT_SAMPLE_RATE721,47103
+  AUDIO_DISPLAY_FORMAT_MILISECONDS: number	//Audio Display format milisecondsAUDIO_DISPLAY_FORMAT_MILISECONDS722,47192
 export declare type SequenceSettings = {SequenceSettings725,47273
+export declare type SequenceSettings = {SequenceSettings725,47273
+  getMaximumBitDepth(): Promise<boolean>	//Find if maximum bit depth is setgetMaximumBitDepth726,47314
+  setMaximumBitDepth(useMaxBitDepth: boolean): Promise<boolean>	//Set maximum bit depth to true/setMaximumBitDepth727,47390
+  getMaxRenderQuality(): Promise<boolean>	//Find if maximum render quality is setgetMaxRenderQuality728,47492
+  setMaxRenderQuality(useMaxRenderQuality: boolean): Promise<boolean>	//Set maximum render qualisetMaxRenderQuality729,47574
+  getAudioChannelCount(): Promise<number>	//Get number of channels in the sequencegetAudioChannelCount730,47687
+  getAudioChannelType(): Promise<number>	//Get Audio channel type of sequence. Could be 0 (Mono)getAudioChannelType731,47770
+  getAudioDisplayFormat(): Promise<TimeDisplay>	//Get Audio display formatgetAudioDisplayFormat732,47909
+  setAudioDisplayFormat(audioDisplay: TimeDisplay): Promise<boolean>	//Set audio display format setAudioDisplayFormat733,47984
+  getAudioSampleRate(): Promise<FrameRate>	//Get audio sample rategetAudioSampleRate734,48093
+  setAudioSampleRate(inRate: FrameRate): Promise<boolean>	//Set audio sample ratesetAudioSampleRate735,48160
+  getVideoDisplayFormat(): Promise<TimeDisplay>	//Get Video display formatgetVideoDisplayFormat736,48242
+  setVideoDisplayFormat(audioDisplay: TimeDisplay): Promise<boolean>	//Set video display format setVideoDisplayFormat737,48317
+  getVideoFieldType(): Promise<number>	//Get video field type in the sequencegetVideoFieldType738,48425
+  setVideoFieldType(videoFiledType: number): Promise<boolean>	//Set video field type in sequencesetVideoFieldType739,48503
+  getVideoFrameRect(): Promise<RectF>	//Get video frame rect in the sequencegetVideoFrameRect740,48600
+  setVideoFrameRect(inVideoFrameRect: RectF): Promise<boolean>	//Set video frame rect in sequencsetVideoFrameRect741,48677
+  getVideoPixelAspectRatio(): Promise<string>	//Get Video display formatgetVideoPixelAspectRatio742,48775
+  setVideoPixelAspectRatio(inPixelAspectRatio: string): Promise<boolean>	//Set video display forsetVideoPixelAspectRatio743,48848
+  getCompositeInLinearColor(): Promise<boolean>	//Get if composite in linear color is checkedgetCompositeInLinearColor744,48960
+  setCompositeInLinearColor(useCompositeInLinearColor: boolean): Promise<boolean>	//Set if composetCompositeInLinearColor745,49054
+  getEditingMode(): Promise<string>	//Get editing mode of sequencegetEditingMode746,49182
+  setEditingMode(inEditingModeName: string): Promise<boolean>	//Set editing mode of sequencesetEditingMode747,49249
+  getPreviewFileFormat(): Promise<string>	//Get preview file format of sequencegetPreviewFileFormat748,49342
+  setPreviewFileFormat(inPreviewCodec: string): Promise<boolean>	//Set preview file format of sesetPreviewFileFormat749,49422
+  getPreviewCodec(): Promise<string>	//Get preview codec of sequencegetPreviewCodec750,49525
+  setPreviewCodec(inPreviewCodec: string): Promise<boolean>	//Set preview codec of sequencesetPreviewCodec751,49594
+  getPreviewFrameRect(): Promise<RectF>	//Get preview video frame rect in the sequencegetPreviewFrameRect752,49686
+  setPreviewFrameRect(inPreviewVideoRect: RectF): Promise<boolean>	//Set preview video frame recsetPreviewFrameRect753,49773
 export declare type SequenceUtilsStatic = {SequenceUtilsStatic756,49886
+export declare type SequenceUtilsStatic = {SequenceUtilsStatic756,49886
+  performSceneEditDetectionOnSelection(clipOperation: string, trackItemSelection: TrackItemSelecperformSceneEditDetectionOnSelection757,49930
+  SEQUENCE_OPERATION_APPLYCUT: string	//ApplyCutsSEQUENCE_OPERATION_APPLYCUT758,50101
+  SEQUENCE_OPERATION_CREATEMARKER: string	//CreateMarkersSEQUENCE_OPERATION_CREATEMARKER759,50151
+  SEQUENCE_OPERATION_CREATESUBCLIP: string	//CreateSubclipsSEQUENCE_OPERATION_CREATESUBCLIP760,50209
+export declare type SequenceUtils = {SequenceUtils763,50272
 export declare type SequenceUtils = {SequenceUtils763,50272
 export declare type SnapEventStatic = {SnapEventStatic766,50313
+export declare type SnapEventStatic = {SnapEventStatic766,50313
+  EVENT_SNAP_TO_KEYFRAME: string	//Event occurs a user scrub on timeline over keyframes when shiEVENT_SNAP_TO_KEYFRAME767,50353
+  EVENT_SNAP_TO_TRACKITEM: string	//Event occurs a user scrub on timeline and snaps to various tEVENT_SNAP_TO_TRACKITEM768,50468
+  EVENT_SNAP_TO_GUIDES: string	//Event occurs object is snapped to guildelines when holding the EVENT_SNAP_TO_GUIDES769,50586
+  EVENT_SNAP_RAZOR_TO_PLAYHEAD: string	//Event occurs when the razor tool hovers over the playheEVENT_SNAP_RAZOR_TO_PLAYHEAD770,50696
+  EVENT_SNAP_RAZOR_TO_MARKER: string	//Event occurs when the razor tool hovers over the all typeEVENT_SNAP_RAZOR_TO_MARKER771,50830
+  EVENT_SNAP_PLAYHEAD_TO_TRACKITEM_EDGE: string	//Event occurs when the playhead snaps into tracEVENT_SNAP_PLAYHEAD_TO_TRACKITEM_EDGE772,50974
+export declare type SnapEvent = {SnapEvent775,51087
 export declare type SnapEvent = {SnapEvent775,51087
 export declare type SourceMonitorStatic = {SourceMonitorStatic778,51124
+export declare type SourceMonitorStatic = {SourceMonitorStatic778,51124
+  openFilePath(filePath: string): Promise<boolean>	//Open the item at the specified path and senopenFilePath779,51168
+  openProjectItem(projectItem: ProjectItem): Promise<boolean>	//Open input projectItem on SourceopenProjectItem780,51300
+  closeClip(): Promise<boolean>	//Close clip on Source MonitorcloseClip781,51405
+  closeAllClips(): Promise<boolean>	//Close all clips on Source MonitorcloseAllClips782,51468
+  getPosition(): Promise<TickTime>	//Get position of source monitor in timegetPosition783,51540
+  play(speed?: number): Promise<boolean>	//Play clip at source monitor with input speedplay784,51616
+  getProjectItem(): Promise<ProjectItem>	//Get projectItem at source monitorgetProjectItem785,51704
+export declare type SourceMonitor = {SourceMonitor788,51784
 export declare type SourceMonitor = {SourceMonitor788,51784
 export declare type TextSegmentsStatic = {TextSegmentsStatic791,51825
+export declare type TextSegmentsStatic = {TextSegmentsStatic791,51825
+  importFromJSON(json: string, callback1: ( importedTranscription: TextSegments ) => void): boolimportFromJSON792,51868
+export declare type TextSegments = {TextSegments795,52036
 export declare type TextSegments = {TextSegments795,52036
 export declare type TickTimeStatic = {TickTimeStatic798,52076
+export declare type TickTimeStatic = {TickTimeStatic798,52076
+  createWithFrameAndFrameRate(frameCount: number, frameRate: FrameRate): TickTime	//Constructs acreateWithFrameAndFrameRate799,52115
+  createWithSeconds(seconds: number): TickTime	//Constructs a TickTime object with seconds.createWithSeconds800,52259
+  createWithTicks(ticks: string): TickTime	//Constructs a TickTime object with ticks as a stringcreateWithTicks801,52351
+  TIME_ZERO: TickTime	//Zero Tick Time ConstantTIME_ZERO802,52449
+  TIME_ONE_SECOND: TickTime	//One Second Tick Time ConstantTIME_ONE_SECOND803,52497
+  TIME_ONE_MINUTE: TickTime	//One Second Tick Time ConstantTIME_ONE_MINUTE804,52557
+  TIME_ONE_HOUR: TickTime	//One Hour Tick Time ConstantTIME_ONE_HOUR805,52617
+  TIME_MAX: TickTime	//Max Tick Time ConstantTIME_MAX806,52673
+  TIME_MIN: TickTime	//Min Tick Time ConstantTIME_MIN807,52719
+  TIME_INVALID: TickTime	//Invalid Tick Time ConstantTIME_INVALID808,52765
 export declare type TickTime = {TickTime811,52822
+export declare type TickTime = {TickTime811,52822
+  equals(tickTime: TickTime): boolean	//Returns true if the given TickTime is equal to the TickTequals813,52870
+  alignToNearestFrame(frameRate: FrameRate): TickTime	//AlignToNearestFrame will return a TickTialignToNearestFrame814,52977
+  alignToFrame(frameRate: FrameRate): TickTime	//alignToFrame will return a TickTime that is alialignToFrame815,53223
+  add(tickTime: TickTime): TickTime	//Add another TickTime to this one and return it. This TickTadd816,53439
+  subtract(tickTime: TickTime): TickTime	//Subtract another TickTime from this one and return itsubtract817,53556
+  multiply(factor: number): TickTime	//Multiply this TickTime with a factor and return it. This multiply818,53685
+  divide(divisor: number): TickTime	//Divide this TickTime by a divisor and return it. In case odivide819,53807
+  seconds: number	//Get the TickTime in secondsseconds820,53982
+  ticks: string	//Get the TickTime in ticks as a stringticks821,54030
+  ticksNumber: number	//Get the TickTime in ticks as a numberticksNumber822,54086
 export declare type TimeDisplay = {TimeDisplay825,54151
+export declare type TimeDisplay = {TimeDisplay825,54151
+  type: number	//Read/Write property to get/set the time display type numeric codetype826,54187
 export declare type TrackItemSelectionStatic = {TrackItemSelectionStatic829,54273
+export declare type TrackItemSelectionStatic = {TrackItemSelectionStatic829,54273
+  createEmptySelection(callback0: (selection: TrackItemSelection) => void): boolean	//Create empcreateEmptySelection830,54322
 export declare type TrackItemSelection = {TrackItemSelection833,54434
+export declare type TrackItemSelection = {TrackItemSelection833,54434
+  addItem(trackItem: VideoClipTrackItem | AudioClipTrackItem, skipDuplicateCheck?: boolean): booaddItem834,54477
+  removeItem(trackItem: VideoClipTrackItem | AudioClipTrackItem): boolean	//Remove a track item removeItem835,54615
+  getTrackItems(): Promise<(VideoClipTrackItem | AudioClipTrackItem)[]>	//return list of trackItgetTrackItems836,54731
 export declare type TransitionFactoryStatic = {TransitionFactoryStatic839,54863
+export declare type TransitionFactoryStatic = {TransitionFactoryStatic839,54863
+  createVideoTransition(matchName: string): VideoTransition	//Creates a new video filter componecreateVideoTransition840,54911
+  getVideoTransitionMatchNames(): Promise<string[]>	//Return a promise which will be fullfilled getVideoTransitionMatchNames841,55039
+export declare type TransitionFactory = {TransitionFactory844,55183
 export declare type TransitionFactory = {TransitionFactory844,55183
 export declare type UniqueSerializeableStatic = {UniqueSerializeableStatic847,55228
+export declare type UniqueSerializeableStatic = {UniqueSerializeableStatic847,55228
+  cast(item: ProjectItem | ClipProjectItem | FolderItem | Sequence): UniqueSerializeable	//Cast cast848,55278
 export declare type UniqueSerializeable = {UniqueSerializeable851,55440
+export declare type UniqueSerializeable = {UniqueSerializeable851,55440
+  getUniqueID(): Guid	//Get the unique ID of the serializeable objectgetUniqueID852,55484
 export declare type UtilsStatic = {UtilsStatic855,55557
+export declare type UtilsStatic = {UtilsStatic855,55557
+  isAEInstalled(): Promise<boolean>	//Check if AE is installed.isAEInstalled856,55593
+export declare type Utils = {Utils859,55660
 export declare type Utils = {Utils859,55660
 export declare type VideoClipTrackItemStatic = {VideoClipTrackItemStatic862,55693
+export declare type VideoClipTrackItemStatic = {VideoClipTrackItemStatic862,55693
+  TRACKITEMTYPE_EMPTY: number	//Empty Track Item TypeTRACKITEMTYPE_EMPTY863,55742
+  TRACKITEMTYPE_CLIP: number	//Clip Track Item TypeTRACKITEMTYPE_CLIP864,55796
+  TRACKITEMTYPE_TRANSITION: number	//Transition Track Item TypeTRACKITEMTYPE_TRANSITION865,55848
+  TRACKITEMTYPE_PREVIEW: number	//Previe Track Item TypeTRACKITEMTYPE_PREVIEW866,55912
+  TRACKITEMTYPE_FEEDBACK: number	//Feedback Track Item TypeTRACKITEMTYPE_FEEDBACK867,55969
 export declare type VideoClipTrackItem = {VideoClipTrackItem870,56032
+export declare type VideoClipTrackItem = {VideoClipTrackItem870,56032
+  createAddVideoTransitionAction(videoTransition: VideoTransition, addTransitionOptionsPropertiecreateAddVideoTransitionAction871,56075
+  createRemoveVideoTransitionAction(transitionPosition?: Constants.TransitionPosition): Action	/createRemoveVideoTransitionAction872,56249
+  getMatchName(): Promise<string>	//Returns the value of internal matchname for this trackItemgetMatchName873,56387
+  getName(): Promise<string>	//Returns the display name for trackItemgetName874,56482
+  getIsSelected(): Promise<boolean>	//Returns if trackItem is selected or notgetIsSelected875,56552
+  getSpeed(): Promise<number>	//Returns the value of speed of the trackItemgetSpeed876,56630
+  isAdjustmentLayer(): Promise<boolean>	//Returns true if the trackitem is an adjustment layerisAdjustmentLayer877,56706
+  isSpeedReversed(): Promise<number>	//Returns true if the trackitem is reversedisSpeedReversed878,56801
+  createMoveAction(tickTime: TickTime): Action	//Returns an action that moves the inPoint of thecreateMoveAction879,56882
+  getInPoint(): Promise<TickTime>	//Returns a TickTime object representing the track item in poigetInPoint880,57044
+  getOutPoint(): Promise<TickTime>	//Returns a TickTime object representing the track item out pgetOutPoint881,57221
+  createSetInPointAction(tickTime: TickTime): Action	//Create SetInPointAction for setting the tcreateSetInPointAction882,57400
+  createSetOutPointAction(tickTime: TickTime): Action	//Create SetOutPointAction for setting thecreateSetOutPointAction883,57592
+  getStartTime(): Promise<TickTime>	//Returns a TickTime object representing the starting sequengetStartTime884,57787
+  getEndTime(): Promise<TickTime>	//Returns a TickTime object representing the ending sequence tgetEndTime885,57947
+  createSetStartAction(tickTime: TickTime): Action	//Create set start time action for sequencecreateSetStartAction886,58103
+  createSetEndAction(tickTime: TickTime): Action	//Create set end time action for sequencecreateSetEndAction887,58198
+  getDuration(): Promise<TickTime>	//Returns timecode representing the duration of this track itgetDuration888,58289
+  getType(): Promise<number>	//Index representing the type of this track item.getType889,58420
+  isDisabled(): Promise<boolean>	//Returns true if trackitem is muted/disabledisDisabled890,58499
+  createSetDisabledAction(disabled: boolean): Action	//Returns an action that enables/disables tcreateSetDisabledAction891,58578
+  createSetNameAction(inName: string): Action	//Returns an action that renames the trackItemcreateSetNameAction892,58688
+  getMediaType(): Promise<Guid>	//Returns UUID representing the underlying media type of this trgetMediaType893,58781
+  getTrackIndex(): Promise<number>	//Index representing the track index of the track this track getTrackIndex894,58886
+  getProjectItem(): Promise<ProjectItem>	//Returns the project item for this track item.getProjectItem895,58998
+  getComponentChain(): Promise<VideoComponentChain>	//Returns VideoComponentChaingetComponentChain896,59087
+export declare type VideoComponentChainStatic = {VideoComponentChainStatic899,59172
 export declare type VideoComponentChainStatic = {VideoComponentChainStatic899,59172
 export declare type VideoComponentChain = {VideoComponentChain902,59225
+export declare type VideoComponentChain = {VideoComponentChain902,59225
+  createInsertComponentAction(component: Component | VideoFilterComponent, componentInsertionIndcreateInsertComponentAction903,59269
+  createAppendComponentAction(component: Component | VideoFilterComponent): Action	//Creates andcreateAppendComponentAction904,59434
+  createRemoveComponentAction(component: Component | VideoFilterComponent): Action	//Creates andcreateRemoveComponentAction905,59566
+  getComponentAtIndex(componentIndex: number): Component	//Returns the component at the given ingetComponentAtIndex906,59698
+  getComponentCount(): number	//Gets the number of components in the component chaingetComponentCount907,59798
+export declare type VideoFilterComponentStatic = {VideoFilterComponentStatic910,59886
 export declare type VideoFilterComponentStatic = {VideoFilterComponentStatic910,59886
 export declare type VideoFilterComponent = {VideoFilterComponent913,59940
+export declare type VideoFilterComponent = {VideoFilterComponent913,59940
 export declare type VideoFilterFactoryStatic = {VideoFilterFactoryStatic916,59988
+export declare type VideoFilterFactoryStatic = {VideoFilterFactoryStatic916,59988
+  createComponent(matchName: string): Promise<VideoFilterComponent>	//Creates a new video filtercreateComponent917,60037
+  getMatchNames(): Promise<string[]>	//Returns an array of video filter matchNamesgetMatchNames918,60173
+  getDisplayNames(): Promise<string[]>	//Returns an array of video filter display namesgetDisplayNames919,60256
+export declare type VideoFilterFactory = {VideoFilterFactory922,60347
 export declare type VideoFilterFactory = {VideoFilterFactory922,60347
 export declare type VideoTrackStatic = {VideoTrackStatic925,60393
+export declare type VideoTrackStatic = {VideoTrackStatic925,60393
+  EVENT_TRACK_CHANGED: string	//Event Object for Track changedEVENT_TRACK_CHANGED926,60434
+  EVENT_TRACK_INFO_CHANGED: string	//Event Object for Track Info ChangedEVENT_TRACK_INFO_CHANGED927,60497
+  EVENT_TRACK_LOCK_CHANGED: string	//Event Object for Track Lock ChangedEVENT_TRACK_LOCK_CHANGED928,60570
 export declare type VideoTrack = {VideoTrack931,60646
+export declare type VideoTrack = {VideoTrack931,60646
+  setMute(mute: boolean): Promise<boolean>	//sets the mute state of the track to muted/unmutedsetMute932,60681
+  getMediaType(): Promise<Guid>	//UUID representing the underlying media type of this trackgetMediaType933,60776
+  getIndex(): Promise<number>	//Index representing the track index of this track within the tracgetIndex934,60868
+  isMuted(): Promise<boolean>	//Get mute state of the trackisMuted935,60973
+  getTrackItems(trackItemType: Constants.TrackItemType, includeEmptyTrackItems: boolean): VideoCgetTrackItems936,61033
+  name: string	//Get the name of the trackname937,61207
+  id: number	//The ID of the track within the TrackGroupid938,61250
 export declare type VideoTransitionStatic = {VideoTransitionStatic941,61310
+export declare type VideoTransitionStatic = {VideoTransitionStatic941,61310
+  TRANSITIONPOSITION_START: number	//TransitionPosition: STARTTRANSITIONPOSITION_START942,61356
+  TRANSITIONPOSITION_END: number	//TransitionPosition: ENDTRANSITIONPOSITION_END943,61419
+export declare type VideoTransition = {VideoTransition946,61481
 export declare type VideoTransition = {VideoTransition946,61481
 export declare type EventManagerStatic = {EventManagerStatic949,61524
+export declare type EventManagerStatic = {EventManagerStatic949,61524
+  addEventListener(target: Project | Sequence | VideoTrack | AudioTrack | EncoderManager, eventNaddEventListener950,61567
+  removeEventListener(target: Project | Sequence | VideoTrack | AudioTrack | EncoderManager, everemoveEventListener951,61894
+  addGlobalEventListener(eventName: string | Constants.SnapEvent | Constants.ProjectEvent | ConsaddGlobalEventListener952,62203
+  removeGlobalEventListener(eventName: string | Constants.SnapEvent | Constants.ProjectEvent | CremoveGlobalEventListener953,62455
+export declare type EventManager = {EventManager956,62690
 export declare type EventManager = {EventManager956,62690
 export declare type TranscriptStatic = {TranscriptStatic959,62730
+export declare type TranscriptStatic = {TranscriptStatic959,62730
+  importFromJSON(jsonString: string): TextSegments	//Returns TextSegments object initialized froimportFromJSON960,62771
+  createImportTextSegmentsAction(textSegments: TextSegments, clipProjectItem: ClipProjectItem): createImportTextSegmentsAction961,62880
+  exportToJSON(clipProjectItem: ClipProjectItem): Promise<string>	//Export transcripts inside ofexportToJSON962,63051
+export declare type Transcript = {Transcript965,63202
 export declare type Transcript = {Transcript965,63202
 export namespace Constants {Constants969,63241
 	export enum MediaType {MediaType970,63270
