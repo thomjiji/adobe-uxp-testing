@@ -48,7 +48,7 @@ const clearLog = () => {
 };
 
 const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");
-const logError = (msg) => log(`> ${msg}`, "#ff0000");
+const logError = (msg) => log(`> ${msg}`, "#ffaa00");
 const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");
 const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");
 
