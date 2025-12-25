@@ -1,90 +1,21 @@
-# Premiere Pro UXP Casting Cheat Sheet
+# Get File Paths Plugin
 
-## Core Hierarchy
-- ProjectItem (Base)
-  - FolderItem (`type === 2`): Bins/Folders.
-  - ClipProjectItem (`type === 1`): Clips and Sequences.
-    - If `isSequence()`, use `getSequence()` to get the Sequence object.
+This plugin allows you to quickly find and export the file paths of media used in your Premiere Pro project.
 
-## Essential Flow
+What it does:
+It scans your project bins to find all media files or specifically identifying offline (missing) files. It displays the paths directly in the plugin window and allows you to export this list to a file.
 
-Simplified version:
-```mermaid
-project.getRootItem() → FolderItem
-  └─ getItems() → ProjectItem[]
-      ├─ type 2: FolderItem.cast(item) → getItems() (Recurse)
-      └─ type 1: ClipProjectItem.cast(item)
-          ├─ isSequence() → Sequence object (Timeline, Tracks)
-          └─ isClip → getMediaFilePath(), changeMediaFilePath()
-```
+Main Features:
+1. Scan Media: Finds all media files associated with clips in the selected bins (or the entire project).
+2. Scan Offline: Finds only the clips that are currently offline or missing their media.
+3. Export: Saves the results of the last scan to a text (.txt) or CSV (.csv) file.
 
-Complete version:
-``` mermaid
-PROJECT
-  │
-  ├─> getRootItem() → FolderItem
-  │                      │
-  │                      └─> getItems() → ProjectItem[]
-  │                                          │
-  │                                          ├─> Check item.type
-  │                                          │
-  │                                          ├─> if type === 2 (TYPE_BIN)
-  │                                          │   └─> FolderItem.cast(item)
-  │                                          │       └─> getItems() (recurse)
-  │                                          │
-  │                                          └─> if type !== 2 (TYPE_CLIP, etc)
-  │                                              └─> ClipProjectItem.cast(item)
-  │                                                  │
-  │                                                  ├─> isSequence()
-  │                                                  │   └─> true: getSequence() → Sequence
-  │                                                  │                              │
-  │                                                  │                              ├─> getVideoTrack() → VideoTrack
-  │                                                  │                              │   └─> getTrackItems() → VideoClipTrackItem[]
-  │                                                  │                              │
-  │                                                  │                              └─> getAudioTrack() → AudioTrack
-  │                                                  │                                  └─> getTrackItems() → AudioClipTrackItem[]
-  │                                                  │
-  │                                                  └─> false: it's a clip
-  │                                                      ├─> getMediaFilePath()
-  │                                                      ├─> changeMediaFilePath()
-  │                                                      ├─> isOffline()
-  │                                                      └─> etc.
-  │
-  └─> For any object: UniqueSerializeable.cast(item) → getUniqueID() → Guid
-```
+How it works:
+1. Select one or more bins in your Project Panel. If you select nothing, it scans the entire project.
+2. Click "Scan Media" to list all files, or "Scan Offline" to find missing media.
+3. The plugin counts items and shows real-time progress while scanning.
+4. Results are displayed in the log window.
+5. Click "Export" to save the list to your computer for use in spreadsheets or other tools.
 
-## Key Casts
-| From          | To                    | Method                                | Purpose                           |
-|:--------------|:----------------------|:--------------------------------------|:----------------------------------|
-| `ProjectItem` | `FolderItem`          | `ppro.FolderItem.cast(item)`          | Access bin children (`getItems`)  |
-| `ProjectItem` | `ClipProjectItem`     | `ppro.ClipProjectItem.cast(item)`     | Access media paths / sequences    |
-| `Any`         | `UniqueSerializeable` | `ppro.UniqueSerializeable.cast(item)` | Get unique ID via `getUniqueID()` |
-| `Specific`    | `ProjectItem`         | `ppro.ProjectItem.cast(item)`         | Reverse cast to base type         |
-
-## Practical Pattern
-```js
-const items = await (await project.getRootItem()).getItems();
-
-for (const item of items) {
-  if (item.type === 2) {
-    const folder = ppro.FolderItem.cast(item);
-    // it's a bin
-  } else {
-    const clip = ppro.ClipProjectItem.cast(item);
-    if (await clip.isSequence()) {
-      const seq = await clip.getSequence();
-      // it's a sequence
-    } else {
-      const path = await clip.getMediaFilePath();
-      // it's a clip
-    }
-  }
-}
-```
-
-## Shortcuts
-- Type 1: Clip / Sequence
-- Type 2: Bin / Folder
-- Type 3: Root Item
-
-- Close Premiere Project: `Ctrl+Shift+W` (C-S-W)
+Why use it:
+It is useful for generating asset lists, checking which files are used in a project, or quickly identifying and creating a report of missing media files to help with relinking or archiving.

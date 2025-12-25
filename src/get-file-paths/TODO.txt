@@ -1,8 +1,0 @@
-Get file paths, export to a csv file so I can do something useful outside of Premiere.
-
-1. Scan all media under root
-2. Find all offline media under root
-3. Scan only selected bins
-
-TODO:
-[DONE] 1. Export button, default filename should have date info.
