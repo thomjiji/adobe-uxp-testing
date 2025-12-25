@@ -435,7 +435,7 @@ async function scanMedia() {
     // Scan the selected items (or root)
     const mediaFiles = await collectMediaFilesFromItems(items, 10);
 
-    clearProgress();
+    // clearProgress();
     cachedMediaFiles = mediaFiles;
     lastScanType = 'media'; // Mark that media scan was run last
 
@@ -480,7 +480,7 @@ async function scanOffline() {
     // Scan for offline files in selected items (or root)
     const offlineFiles = await collectOfflineFilesFromItems(items, 10);
 
-    clearProgress();
+    // clearProgress();
     cachedOfflineFiles = offlineFiles;
     lastScanType = 'offline'; // Mark that offline scan was run last
 
