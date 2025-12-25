@@ -131,169 +131,96 @@ function isUnwantedItem(name) {
   return lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.txt');
 }
 
-async function collectUnwantedItems(folder, unwantedItems, parent, batchSize = 10) {
-  const items = await folder.getItems();
+/**
+ * Recursively scans a bin and plans actions for flattening, removing unwanted files, 
+ * and cleaning up empty bins.
+ * 
+ * Returns: { actions: [], isEmpty: boolean }
+ */
+async function scanAndPlan(currentBin, targetBin, depth, options, batchSize = 10) {
+  const allActions = [];
+  let remainingItemCount = 0;
+  
+  const items = await currentBin.getItems();
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
 
-    // Yield to UI every N items
+    // Yield to UI periodically
     if (i > 0 && i % batchSize === 0) {
       await yieldToUI();
     }
-
-    // We don't update global progress here as strictly because this is an extra pass
-    // but we could if we wanted to be precise. For now just yielding is fine.
-
-    if (item.type === 2) {
-      const subFolder = ppro.FolderItem.cast(item);
-      if (subFolder) {
-        await collectUnwantedItems(subFolder, unwantedItems, subFolder, batchSize);
-      }
-    } else {
-      // Check if it's an unwanted file
-      if (isUnwantedItem(item.name)) {
-        unwantedItems.push({
-            item: item,
-            parent: parent || folder 
-        });
-        logInfo(`Found unwanted file: ${item.name}`);
-      }
-    }
-  }
-}
-
-async function collectDeepClips(folder, targetBin, currentDepth, clipsToMove, batchSize = 10) {
-  const items = await folder.getItems();
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-
-    // Yield to UI every N items
-    if (i > 0 && i % batchSize === 0) {
-      await yieldToUI();
-    }
-
+    
+    // Update global progress
     scanProgress.processed++;
     updateProgress(scanProgress.processed, scanProgress.total, item.name);
 
     if (item.type === 2) {
+      // It's a Bin
       const subFolder = ppro.FolderItem.cast(item);
       if (subFolder) {
-        if (currentDepth >= 2) {
-          logInfo(`Searching deep bin (level ${currentDepth + 1}): ${item.name}`);
-        }
-        await collectDeepClips(subFolder, targetBin, currentDepth + 1, clipsToMove, batchSize);
-      }
-    } else if (item.type === 1 && currentDepth >= 2) {
-      const clipItem = ppro.ClipProjectItem.cast(item);
-      if (clipItem) {
-        const isSeq = await clipItem.isSequence();
-        if (!isSeq) {
-          clipsToMove.push({
-            item: item,
-            fromFolder: folder,
-            targetBin: targetBin,
-          });
-          logInfo(`Found clip to move: ${item.name}`);
-        }
-      }
-    }
-  }
-}
+        // Recursively process the subfolder
+        const result = await scanAndPlan(subFolder, targetBin, depth + 1, options, batchSize);
+        allActions.push(...result.actions);
 
-async function collectEmptyBins(folder, emptyBins, depth = 0, batchSize = 10) {
-  const items = await folder.getItems();
-
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    
-    // Yield to UI every N items
-    if (i > 0 && i % batchSize === 0) {
-      await yieldToUI();
-    }
-
-    if (item.type === 2) {
-      const subFolder = ppro.FolderItem.cast(item);
-      if (subFolder) {
-        await collectEmptyBins(subFolder, emptyBins, depth + 1, batchSize);
-
-        const subItems = await subFolder.getItems();
-        if (subItems.length === 0) {
-          emptyBins.push({
-            bin: subFolder,
-            item: item,
-            parent: folder,
-            depth: depth,
-          });
-          logInfo(`  Found empty bin at depth ${depth + 1}: ${item.name}`);
-        }
-      }
-    }
-  }
-}
-
-async function removeEmptyBins(selectedBins, project) {
-  log("\n───────────────────────────────────");
-  log("Checking for empty bins to remove...");
-
-  let totalRemovedCount = 0;
-  let passCount = 0;
-  let foundEmpty = true;
-
-  while (foundEmpty) {
-    passCount++;
-    const allEmptyBins = [];
-    const seenBinIds = new Set();
-
-    for (const binData of selectedBins) {
-      const emptyBins = [];
-      logInfo(`Scanning for empty bins in: ${binData.item.name}`);
-      await collectEmptyBins(binData.bin, emptyBins);
-
-      logInfo(`  Found ${emptyBins.length} empty bin(s) in "${binData.item.name}"`);
-
-      for (const emptyBin of emptyBins) {
-        const binId = emptyBin.item.getId();
-        if (!seenBinIds.has(binId)) {
-          seenBinIds.add(binId);
-          allEmptyBins.push(emptyBin);
+        // Check if the subfolder will be empty after actions are applied
+        if (result.isEmpty) {
+          logInfo(`  Marking empty bin for removal: ${item.name}`);
+          const removeAction = currentBin.createRemoveItemAction(item);
+          if (removeAction) {
+            allActions.push(removeAction);
+            // Don't increment remainingItemCount
+          } else {
+            // Failed to create action? Treat as remaining to be safe
+             remainingItemCount++;
+          }
         } else {
-          logInfo(`  Skipping duplicate: ${emptyBin.item.name}`);
+          // Subfolder still has content
+          remainingItemCount++;
         }
       }
-    }
-
-    if (allEmptyBins.length === 0) {
-      foundEmpty = false;
-      if (passCount === 1) {
-        logInfo("No empty bins found.");
-      }
-      break;
-    }
-
-    if (passCount === 1) {
-      logWarning(`Found ${allEmptyBins.length} empty bin(s) to remove...`);
     } else {
-      logInfo(`Pass ${passCount}: Found ${allEmptyBins.length} additional empty bin(s)...`);
-    }
+      // It's a Clip/Item
+      let actionCreated = false;
 
-    let removedCount = 0;
-    project.executeTransaction((compoundAction) => {
-      for (const binData of allEmptyBins) {
-        const removeAction = binData.parent.createRemoveItemAction(binData.item);
+      // Check 1: Unwanted File Removal
+      if (options.removeUnwanted && isUnwantedItem(item.name)) {
+        logInfo(`  Marking unwanted file for removal: ${item.name}`);
+        const removeAction = currentBin.createRemoveItemAction(item);
         if (removeAction) {
-          compoundAction.addAction(removeAction);
-          removedCount++;
-          logInfo(`  Removed: ${binData.item.name}`);
+          allActions.push(removeAction);
+          actionCreated = true;
         }
       }
-    }, `Remove Empty Bins (Pass ${passCount})`);
 
-    totalRemovedCount += removedCount;
+      // Check 2: Flattening (Move deep clips)
+      // Only if not already removed
+      if (!actionCreated && item.type === 1 && depth >= 2) {
+        const clipItem = ppro.ClipProjectItem.cast(item);
+        if (clipItem) {
+          const isSeq = await clipItem.isSequence();
+          if (!isSeq) {
+             logInfo(`  Marking clip to move: ${item.name}`);
+             const moveAction = currentBin.createMoveItemAction(item, targetBin);
+             if (moveAction) {
+               allActions.push(moveAction);
+               actionCreated = true;
+             }
+          }
+        }
+      }
+
+      // If no action was taken on this item, it stays here
+      if (!actionCreated) {
+        remainingItemCount++;
+      }
+    }
   }
 
-  return totalRemovedCount;
+  return {
+    actions: allActions,
+    isEmpty: remainingItemCount === 0
+  };
 }
 
 async function run(options = { removeUnwanted: false }) {
@@ -330,6 +257,7 @@ async function run(options = { removeUnwanted: false }) {
       return;
     }
 
+    // Filter nested selections (don't process a bin if its parent is also selected)
     const finalBins = [];
     for (let i = 0; i < selectedBins.length; i++) {
       let isChild = false;
@@ -356,10 +284,10 @@ async function run(options = { removeUnwanted: false }) {
       return;
     }
 
-    logSuccess(`Processing ${finalBins.length} bin(s) (${selectedBins.length - finalBins.length} skipped as children)...`);
+    logSuccess(`Processing ${finalBins.length} bin(s)...`);
     log("───────────────────────────────────");
     
-    // Count items for progress tracking
+    // 1. Count items for progress tracking
     log("Counting items...");
     scanProgress.total = 0;
     scanProgress.processed = 0;
@@ -370,102 +298,43 @@ async function run(options = { removeUnwanted: false }) {
     }
     log(`Found ${scanProgress.total} items to scan`);
 
-    // --- Optional Unwanted Files Removal ---
-    if (options.removeUnwanted) {
-        log("\nScanning for unwanted files (jpeg, jpg, txt)...");
-        const allUnwantedItems = [];
-        for (const binData of finalBins) {
-            await collectUnwantedItems(binData.bin, allUnwantedItems, binData.bin);
-        }
-
-        if (allUnwantedItems.length > 0) {
-            logWarning(`Found ${allUnwantedItems.length} unwanted file(s) to remove.`);
-            let removedUnwantedCount = 0;
-            
-            project.executeTransaction((compoundAction) => {
-                for (const itemData of allUnwantedItems) {
-                    const removeAction = itemData.parent.createRemoveItemAction(itemData.item);
-                    if (removeAction) {
-                        compoundAction.addAction(removeAction);
-                        removedUnwantedCount++;
-                    }
-                }
-            }, "Remove Unwanted Files");
-            
-            logSuccess(`Removed ${removedUnwantedCount} unwanted file(s).`);
-             // We need to recount because we just removed items!
-             // But actually, updateProgress uses `scanProgress.total` which we set earlier.
-             // If we remove items, `processed` count in `collectDeepClips` might be off or we might process fewer items than `total`.
-             // It's okay, the progress bar will just be approximate or finish early.
-             // Alternatively, we could re-count. Let's just subtract from total.
-             scanProgress.total -= removedUnwantedCount;
-
-        } else {
-            logInfo("No unwanted files found.");
-        }
-        log("───────────────────────────────────");
-    }
-
-    const allClipsToMove = [];
-    let totalClipsFound = 0;
+    // 2. Scan and Plan Actions (One Pass)
+    log("\nScanning and planning actions...");
+    const allPlannedActions = [];
 
     for (const binData of finalBins) {
-      log(`\nProcessing bin: ${binData.item.name}`);
-      log("Scanning for clips in folders deeper than 2 levels...");
-
-      const clipsToMove = [];
-      await collectDeepClips(binData.bin, binData.bin, 0, clipsToMove);
-
-      if (clipsToMove.length === 0) {
-        logInfo(`  No deep clips found in "${binData.item.name}"`);
-      } else {
-        logWarning(`  Found ${clipsToMove.length} clip(s) to flatten from "${binData.item.name}"`);
-        totalClipsFound += clipsToMove.length;
-        allClipsToMove.push(...clipsToMove);
-      }
+      log(`Scanning bin: ${binData.item.name}`);
+      // Start recursion at depth 0
+      // We process the children of the selected bin.
+      // The selected bin itself is the 'targetBin' for moves.
+      const result = await scanAndPlan(binData.bin, binData.bin, 0, options);
+      allPlannedActions.push(...result.actions);
     }
     
     // clearProgress(); // Keep progress persistent
 
     log("\n───────────────────────────────────");
 
-    if (allClipsToMove.length === 0) {
-      if (!options.removeUnwanted) {
-           logSuccess("No clips found in folders deeper than 2 levels. All structures are already flat enough.");
-           return;
-      } else {
-           logSuccess("Flattening check complete (nothing moved).");
+    if (allPlannedActions.length === 0) {
+      logSuccess("No actions needed. Project structure is already clean.");
+      return;
+    }
+
+    log(`Total actions planned: ${allPlannedActions.length}`);
+    log("Executing transaction...");
+
+    // 3. Execute Transaction
+    let executedCount = 0;
+    project.executeTransaction((compoundAction) => {
+      for (const action of allPlannedActions) {
+        compoundAction.addAction(action);
+        executedCount++;
       }
-    } else {
-        log(`Total clips to move: ${totalClipsFound}`);
-        log("Moving clips to their respective bins...");
+    }, options.removeUnwanted ? "Flatten & Remove Unwanted" : "Flatten Folders");
 
-        let movedCount = 0;
-        project.executeTransaction((compoundAction) => {
-        for (const clipData of allClipsToMove) {
-            const moveAction = clipData.fromFolder.createMoveItemAction(
-            clipData.item,
-            clipData.targetBin,
-            );
-            if (moveAction) {
-            compoundAction.addAction(moveAction);
-            movedCount++;
-            }
-        }
-        }, "Flatten Multiple Bins");
-
-        logSuccess(`\nSuccessfully flattened ${movedCount} clip(s) across ${finalBins.length} bin(s)`);
-    }
-
-    // Reset progress for cleanup phase (simulated or just simple spinner would be better, but we'll leave it simple)
-    const removedCount = await removeEmptyBins(finalBins, project);
-
-    if (removedCount > 0) {
-      logSuccess(`\nCleanup complete: Removed ${removedCount} empty bin(s)`);
-    }
-
-    log("\n───────────────────────────────────");
+    logSuccess(`\nSuccessfully executed ${executedCount} operations.`);
     logSuccess(`Operation complete!`);
+    
   } catch (error) {
     clearProgress();
     logError(`Error: ${error.message}`);
