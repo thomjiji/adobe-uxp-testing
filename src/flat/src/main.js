@@ -1,16 +1,34 @@
 const ppro = require("premierepro");
 const { localFileSystem } = require("uxp").storage;
 
-let cachedMediaFiles = [];
-let cachedOfflineFiles = [];
+// Progress tracking
+let scanProgress = {
+  total: 0,
+  processed: 0,
+  currentItem: '',
+  startTime: null
+};
+
+// Buffer log messages to reduce DOM manipulation
+let logBuffer = [];
+let logFlushTimer = null;
 
 const log = (msg, color) => {
-  const body = document.getElementById("plugin-body");
-  if (body) {
-    body.innerHTML += color
-      ? `<span style='color:${color}'>${msg}</span><br />`
-      : `${msg}<br />`;
-  }
+  const logEntry = color
+    ? `<span style='color:${color}'>${msg}</span><br />`
+    : `${msg}<br />`;
+
+  logBuffer.push(logEntry);
+
+  // Debounce DOM updates to every 100ms
+  if (logFlushTimer) clearTimeout(logFlushTimer);
+  logFlushTimer = setTimeout(() => {
+    const body = document.getElementById("plugin-body");
+    if (body && logBuffer.length > 0) {
+      body.innerHTML += logBuffer.join('');
+      logBuffer = [];
+    }
+  }, 100);
 };
 
 const clearLog = () => {
@@ -24,6 +42,34 @@ const logSuccess = (msg) => log(`> ${msg}`, "#00ff00");
 const logError = (msg) => log(`> ${msg}`, "#ff0000");
 const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");
 const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");
+
+// Yield control to UI thread to prevent freezing
+function yieldToUI() {
+  return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+// Update progress text counter
+function updateProgress(processed, total, currentItem) {
+  const progressEl = document.getElementById('progress-text');
+  if (progressEl && total > 0) {
+    const percent = Math.round((processed / total) * 100);
+    const elapsed = Date.now() - scanProgress.startTime;
+    const rate = processed > 0 ? elapsed / processed : 0;
+    const remaining = rate > 0 ? Math.round((total - processed) * rate / 1000) : 0;
+
+    progressEl.innerHTML = `<span style="color: #00ff00;">
+      Scanning: ${processed}/${total} (${percent}%) - ${currentItem}<br/>
+      Estimated time remaining: ${remaining}s
+    </span>`;
+  }
+}
+
+function clearProgress() {
+  const progressEl = document.getElementById('progress-text');
+  if (progressEl) {
+    progressEl.innerHTML = '';
+  }
+}
 
 async function getActiveProjectSafe() {
   try {
@@ -60,17 +106,84 @@ async function isDescendantOf(childBin, potentialParent) {
   }
 }
 
-async function collectDeepClips(folder, targetBin, currentDepth, clipsToMove) {
+// Count total items for accurate progress tracking
+async function countItems(folder) {
+  let count = 0;
   const items = await folder.getItems();
 
   for (const item of items) {
+    if (item.type === 2) {
+      // Recursively count items in bins
+      const subFolder = ppro.FolderItem.cast(item);
+      if (subFolder) {
+        count += await countItems(subFolder);
+      }
+    } else {
+      count++; // Count clips
+    }
+  }
+
+  return count;
+}
+
+function isUnwantedItem(name) {
+  const lowerName = name.toLowerCase();
+  return lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.txt');
+}
+
+async function collectUnwantedItems(folder, unwantedItems, parent, batchSize = 10) {
+  const items = await folder.getItems();
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    // Yield to UI every N items
+    if (i > 0 && i % batchSize === 0) {
+      await yieldToUI();
+    }
+
+    // We don't update global progress here as strictly because this is an extra pass
+    // but we could if we wanted to be precise. For now just yielding is fine.
+
+    if (item.type === 2) {
+      const subFolder = ppro.FolderItem.cast(item);
+      if (subFolder) {
+        await collectUnwantedItems(subFolder, unwantedItems, subFolder, batchSize);
+      }
+    } else {
+      // Check if it's an unwanted file
+      if (isUnwantedItem(item.name)) {
+        unwantedItems.push({
+            item: item,
+            parent: parent || folder 
+        });
+        logInfo(`Found unwanted file: ${item.name}`);
+      }
+    }
+  }
+}
+
+async function collectDeepClips(folder, targetBin, currentDepth, clipsToMove, batchSize = 10) {
+  const items = await folder.getItems();
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+
+    // Yield to UI every N items
+    if (i > 0 && i % batchSize === 0) {
+      await yieldToUI();
+    }
+
+    scanProgress.processed++;
+    updateProgress(scanProgress.processed, scanProgress.total, item.name);
+
     if (item.type === 2) {
       const subFolder = ppro.FolderItem.cast(item);
       if (subFolder) {
         if (currentDepth >= 2) {
           logInfo(`Searching deep bin (level ${currentDepth + 1}): ${item.name}`);
         }
-        await collectDeepClips(subFolder, targetBin, currentDepth + 1, clipsToMove);
+        await collectDeepClips(subFolder, targetBin, currentDepth + 1, clipsToMove, batchSize);
       }
     } else if (item.type === 1 && currentDepth >= 2) {
       const clipItem = ppro.ClipProjectItem.cast(item);
@@ -89,14 +202,21 @@ async function collectDeepClips(folder, targetBin, currentDepth, clipsToMove) {
   }
 }
 
-async function collectEmptyBins(folder, emptyBins, depth = 0) {
+async function collectEmptyBins(folder, emptyBins, depth = 0, batchSize = 10) {
   const items = await folder.getItems();
 
-  for (const item of items) {
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    
+    // Yield to UI every N items
+    if (i > 0 && i % batchSize === 0) {
+      await yieldToUI();
+    }
+
     if (item.type === 2) {
       const subFolder = ppro.FolderItem.cast(item);
       if (subFolder) {
-        await collectEmptyBins(subFolder, emptyBins, depth + 1);
+        await collectEmptyBins(subFolder, emptyBins, depth + 1, batchSize);
 
         const subItems = await subFolder.getItems();
         if (subItems.length === 0) {
@@ -176,10 +296,11 @@ async function removeEmptyBins(selectedBins, project) {
   return totalRemovedCount;
 }
 
-async function run() {
+async function run(options = { removeUnwanted: false }) {
   try {
     clearLog();
-    log("Starting folder flatten operation...");
+    clearProgress();
+    log(`Starting folder flatten operation${options.removeUnwanted ? ' with cleanup' : ''}...`);
 
     const project = await getActiveProjectSafe();
     if (!project) return;
@@ -237,6 +358,53 @@ async function run() {
 
     logSuccess(`Processing ${finalBins.length} bin(s) (${selectedBins.length - finalBins.length} skipped as children)...`);
     log("───────────────────────────────────");
+    
+    // Count items for progress tracking
+    log("Counting items...");
+    scanProgress.total = 0;
+    scanProgress.processed = 0;
+    scanProgress.startTime = Date.now();
+    
+    for (const binData of finalBins) {
+        scanProgress.total += await countItems(binData.bin);
+    }
+    log(`Found ${scanProgress.total} items to scan`);
+
+    // --- Optional Unwanted Files Removal ---
+    if (options.removeUnwanted) {
+        log("\nScanning for unwanted files (jpeg, jpg, txt)...");
+        const allUnwantedItems = [];
+        for (const binData of finalBins) {
+            await collectUnwantedItems(binData.bin, allUnwantedItems, binData.bin);
+        }
+
+        if (allUnwantedItems.length > 0) {
+            logWarning(`Found ${allUnwantedItems.length} unwanted file(s) to remove.`);
+            let removedUnwantedCount = 0;
+            
+            project.executeTransaction((compoundAction) => {
+                for (const itemData of allUnwantedItems) {
+                    const removeAction = itemData.parent.createRemoveItemAction(itemData.item);
+                    if (removeAction) {
+                        compoundAction.addAction(removeAction);
+                        removedUnwantedCount++;
+                    }
+                }
+            }, "Remove Unwanted Files");
+            
+            logSuccess(`Removed ${removedUnwantedCount} unwanted file(s).`);
+             // We need to recount because we just removed items!
+             // But actually, updateProgress uses `scanProgress.total` which we set earlier.
+             // If we remove items, `processed` count in `collectDeepClips` might be off or we might process fewer items than `total`.
+             // It's okay, the progress bar will just be approximate or finish early.
+             // Alternatively, we could re-count. Let's just subtract from total.
+             scanProgress.total -= removedUnwantedCount;
+
+        } else {
+            logInfo("No unwanted files found.");
+        }
+        log("───────────────────────────────────");
+    }
 
     const allClipsToMove = [];
     let totalClipsFound = 0;
@@ -256,33 +424,40 @@ async function run() {
         allClipsToMove.push(...clipsToMove);
       }
     }
+    
+    // clearProgress(); // Keep progress persistent
 
     log("\n───────────────────────────────────");
 
     if (allClipsToMove.length === 0) {
-      logSuccess("No clips found in folders deeper than 2 levels. All structures are already flat enough.");
-      return;
+      if (!options.removeUnwanted) {
+           logSuccess("No clips found in folders deeper than 2 levels. All structures are already flat enough.");
+           return;
+      } else {
+           logSuccess("Flattening check complete (nothing moved).");
+      }
+    } else {
+        log(`Total clips to move: ${totalClipsFound}`);
+        log("Moving clips to their respective bins...");
+
+        let movedCount = 0;
+        project.executeTransaction((compoundAction) => {
+        for (const clipData of allClipsToMove) {
+            const moveAction = clipData.fromFolder.createMoveItemAction(
+            clipData.item,
+            clipData.targetBin,
+            );
+            if (moveAction) {
+            compoundAction.addAction(moveAction);
+            movedCount++;
+            }
+        }
+        }, "Flatten Multiple Bins");
+
+        logSuccess(`\nSuccessfully flattened ${movedCount} clip(s) across ${finalBins.length} bin(s)`);
     }
 
-    log(`Total clips to move: ${totalClipsFound}`);
-    log("Moving clips to their respective bins...");
-
-    let movedCount = 0;
-    project.executeTransaction((compoundAction) => {
-      for (const clipData of allClipsToMove) {
-        const moveAction = clipData.fromFolder.createMoveItemAction(
-          clipData.item,
-          clipData.targetBin,
-        );
-        if (moveAction) {
-          compoundAction.addAction(moveAction);
-          movedCount++;
-        }
-      }
-    }, "Flatten Multiple Bins");
-
-    logSuccess(`\nSuccessfully flattened ${movedCount} clip(s) across ${finalBins.length} bin(s)`);
-
+    // Reset progress for cleanup phase (simulated or just simple spinner would be better, but we'll leave it simple)
     const removedCount = await removeEmptyBins(finalBins, project);
 
     if (removedCount > 0) {
@@ -292,16 +467,21 @@ async function run() {
     log("\n───────────────────────────────────");
     logSuccess(`Operation complete!`);
   } catch (error) {
+    clearProgress();
     logError(`Error: ${error.message}`);
   }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   const scanBtn = document.querySelector("#scan-btn");
+  const flattenRemoveBtn = document.querySelector("#flatten-remove-btn");
   const clearBtn = document.querySelector("#clear-btn");
 
   if (scanBtn) {
-    scanBtn.addEventListener("click", run);
+    scanBtn.addEventListener("click", () => run({ removeUnwanted: false }));
+  }
+  if (flattenRemoveBtn) {
+    flattenRemoveBtn.addEventListener("click", () => run({ removeUnwanted: true }));
   }
   if (clearBtn) {
     clearBtn.addEventListener("click", clearLog);
