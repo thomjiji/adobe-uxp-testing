@@ -1,6 +1,10 @@
 const ppro = require("premierepro");
 const { localFileSystem } = require("uxp").storage;
 
+// Configuration
+const FLATTEN_DEPTH_THRESHOLD = 2; // Clips at this depth or deeper will be moved to the top level
+const UNWANTED_EXTENSIONS = ['.jpg', '.jpeg', '.txt']; // Extensions to remove when using Flatten & Remove
+
 // Progress tracking
 let scanProgress = {
   total: 0,
@@ -128,12 +132,12 @@ async function countItems(folder) {
 
 function isUnwantedItem(name) {
   const lowerName = name.toLowerCase();
-  return lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.txt');
+  return UNWANTED_EXTENSIONS.some(ext => lowerName.endsWith(ext.toLowerCase()));
 }
 
 /**
  * Recursively scans a bin and plans actions for flattening, removing unwanted files, 
- * and cleaning up empty bins.
+ * and cleaning up empty bins. 
  * 
  * Returns: { actions: [], isEmpty: boolean }
  */
@@ -195,7 +199,7 @@ async function scanAndPlan(currentBin, targetBin, depth, options, batchSize = 10
 
       // Check 2: Flattening (Move deep clips)
       // Only if not already removed
-      if (!actionCreated && item.type === 1 && depth >= 2) {
+      if (!actionCreated && item.type === 1 && depth >= FLATTEN_DEPTH_THRESHOLD) {
         const clipItem = ppro.ClipProjectItem.cast(item);
         if (clipItem) {
           const isSeq = await clipItem.isSequence();
