@@ -3,6 +3,9 @@ const { localFileSystem } = require("uxp").storage;
 
 let searchRootEntry = null;
 let fileIndex = new Map(); // Map<fileName, fullPath>
+let missingItems = []; // Array<{name, currentPath}>
+let relinkedItems = []; // Array<{name, oldPath, newPath, status}>
+let isCancelled = false; // Flag for cancellation
 
 // Configuration
 const IGNORED_FOLDERS = [
@@ -15,7 +18,7 @@ const IGNORED_FOLDERS = [
 const MEDIA_EXTENSIONS = new Set([
     ".mov", ".mp4", ".m4v", ".mxf", ".avi", ".wav", ".mp3", ".aif", ".aiff", ".aac",
     ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".psd", ".mts", ".crm", ".r3d", ".braw",
-    ".arw", ".cr2", ".nef", ".dng", ".exr", ".svg", ".bmp", ".gif", "mpg"
+    ".arw", ".cr2", ".nef", ".dng", ".exr", ".svg", ".bmp", ".gif", ".mpg"
 ]);
 
 // Progress tracking
@@ -72,6 +75,7 @@ function yieldToUI() {
 
 // Check if we should yield to UI based on time
 async function checkYield() {
+    if (isCancelled) throw new Error("Operation Cancelled");
     const now = Date.now();
     if (now - lastYieldTime > YIELD_MS) {
         await yieldToUI();
@@ -88,18 +92,18 @@ function updateProgress(processed, total, currentItem, statusPrefix = "Processin
     if (progressEl) {
         if (total > 0) {
             const percent = Math.round((processed / total) * 100);
-            const elapsed = scanProgress.startTime ? Date.now() - scanProgress.startTime : 0;
-            const rate = processed > 0 ? elapsed / processed : 0;
-            const remaining = rate > 0 ? Math.round(((total - processed) * rate) / 1000) : 0;
+            const remaining = scanProgress.startTime
+                ? Math.round(((Date.now() - scanProgress.startTime) / processed) * (total - processed) / 1000)
+                : 0;
 
             progressEl.innerHTML = `<span style="color: #00ff00;">
-                ${statusPrefix}: ${processed}/${total} (${percent}%)
+                ${statusPrefix}: ${processed}/${total} (${percent}%)<br/>
                 <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${currentItem}</div>
                 Est. time remaining: ${remaining}s
                 </span>`;
         } else {
             progressEl.innerHTML = `<span style="color: #00ff00;">
-                ${statusPrefix}: ${processed}
+                ${statusPrefix}: ${processed}<br/>
                 <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${currentItem}</div>
                 </span>`;
         }
@@ -151,6 +155,7 @@ async function indexFolder(folderEntry) {
 
             if (entry.isFolder) {
                 await indexFolder(entry).catch((err) => {
+                    if (err.message === "Operation Cancelled") throw err;
                     logInfo(`Skipping folder ${entry.name}: ${err.message}`);
                 });
             } else if (entry.isFile) {
@@ -182,6 +187,10 @@ async function performFileIndexing() {
         logSuccess(`Indexed ${fileIndex.size} files.`);
         return true;
     } catch (e) {
+        if (e.message === "Operation Cancelled") {
+            logError("Indexing cancelled by user.");
+            return false;
+        }
         logError(`Error indexing folder: ${e.message}`);
         return false;
     }
@@ -192,21 +201,21 @@ async function performFileIndexing() {
 // --------------------------------------------------------
 
 async function countProjectItems(folder) {
-  let count = 0;
-  const items = await folder.getItems();
+    let count = 0;
+    const items = await folder.getItems();
 
-  for (const item of items) {
-    await checkYield();
-    count++; // Count every item (bin or clip)
+    for (const item of items) {
+        await checkYield();
+        count++; // Count every item
 
-    if (item.type === 2) { // Bin
-      const subFolder = ppro.FolderItem.cast(item);
-      if (subFolder) {
-        count += await countProjectItems(subFolder);
-      }
+        if (item.type === 2) {
+            const subFolder = ppro.FolderItem.cast(item);
+            if (subFolder) {
+                count += await countProjectItems(subFolder);
+            }
+        }
     }
-  }
-  return count;
+    return count;
 }
 
 async function processProjectItems(folder) {
@@ -236,28 +245,138 @@ async function processProjectItems(folder) {
 
 async function tryRelinkClip(clipItem, clipName) {
     const newPath = fileIndex.get(clipName);
+    let currentPath = "";
+
+    try {
+        currentPath = await clipItem.getMediaFilePath();
+    } catch (e) {
+        // Can happen if item is special or synthetic
+    }
 
     if (newPath) {
-        try {
-            const currentPath = await clipItem.getMediaFilePath();
-            if (currentPath !== newPath) {
-                logInfo(`Relinking: ${clipName}`);
+        // Match found in index
+        if (currentPath !== newPath) {
+            logInfo(`Relinking: ${clipName}`);
+            try {
                 const result = await clipItem.changeMediaFilePath(newPath);
                 if (result) {
                     logSuccess(`  Success: ${clipName}`);
+                    relinkedItems.push({
+                        name: clipName,
+                        oldPath: currentPath,
+                        newPath: newPath,
+                        status: "Success"
+                    });
                 } else {
-                    logError(`  Failed to change path for: ${clipName}`);
+                    logError(`  Failed to change path: ${clipName}`);
+                    relinkedItems.push({
+                        name: clipName,
+                        oldPath: currentPath,
+                        newPath: newPath,
+                        status: "Failed (API Error)"
+                    });
                 }
+            } catch (e) {
+                logError(`  Error: ${e.message}`);
+                relinkedItems.push({
+                    name: clipName,
+                    oldPath: currentPath,
+                    newPath: newPath,
+                    status: `Error: ${e.message}`
+                });
             }
-        } catch (e) {
-            logError(`Error processing ${clipName}: ${e.message}`);
+        } else {
+            // Already matches
+            relinkedItems.push({
+                name: clipName,
+                oldPath: currentPath,
+                newPath: newPath,
+                status: "Skipped (Already Linked)"
+            });
         }
+    } else {
+        // No match found in index
+        logWarning(`Not found in search folder: ${clipName}`);
+        missingItems.push({
+            name: clipName,
+            currentPath: currentPath
+        });
+    }
+}
+
+// --------------------------------------------------------
+// Export Functionality
+// --------------------------------------------------------
+
+function getFormattedTimestamp() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    return `${year}${month}${day}${hours}${minutes}`;
+}
+
+async function exportResults() {
+    if (relinkedItems.length === 0 && missingItems.length === 0) {
+        logWarning("No results to export. Run a scan first.");
+        return;
+    }
+
+    try {
+        const timestamp = getFormattedTimestamp();
+        const defaultFilename = `relink_log_${timestamp}.csv`;
+
+        const file = await localFileSystem.getFileForSaving(defaultFilename, {
+            types: ["csv", "txt"],
+        });
+
+        if (!file) {
+            logInfo("Export cancelled");
+            return;
+        }
+
+        let content = "Name,Status,Old Path,New Path\n";
+
+        // Add Relinked Items
+        content += relinkedItems.map(item =>
+            `"${item.name}","${item.status}","${item.oldPath}","${item.newPath}"`
+        ).join("\n");
+
+        // Add Missing Items
+        content += missingItems.map(item =>
+            `"${item.name}","Missing in Search Folder","${item.currentPath}",""`
+        ).join("\n");
+
+        await file.write(content);
+        logSuccess(`Log saved to: ${file.nativePath}`);
+
+    } catch (e) {
+        logError(`Error saving log: ${e.message}`);
     }
 }
 
 // --------------------------------------------------------
 // Main Execution
 // --------------------------------------------------------
+
+function setButtonsState(isRunning) {
+    const runBtn = document.getElementById("run-btn");
+    const stopBtn = document.getElementById("stop-btn");
+    const selectFolderBtn = document.getElementById("select-folder-btn");
+
+    if (runBtn) runBtn.disabled = isRunning;
+    if (stopBtn) stopBtn.disabled = !isRunning;
+    if (selectFolderBtn) selectFolderBtn.disabled = isRunning;
+}
+
+function stopOperation() {
+    if (!isCancelled) {
+        isCancelled = true;
+        logWarning("Stopping operation... please wait.");
+    }
+}
 
 async function selectFolder() {
     try {
@@ -277,35 +396,80 @@ async function selectFolder() {
 
 async function run() {
     clearLog();
-    const project = await getActiveProjectSafe();
-    if (!project) return;
-    if (!searchRootEntry) {
-        logError("Please select a search folder first.");
-        return;
+    missingItems = [];
+    relinkedItems = [];
+    isCancelled = false;
+    setButtonsState(true);
+
+    try {
+        const project = await getActiveProjectSafe();
+        if (!project) throw new Error("No active project");
+        if (!searchRootEntry) throw new Error("Please select a search folder first.");
+
+        // 1. Index Files
+        const indexSuccess = await performFileIndexing();
+        if (!indexSuccess || isCancelled) throw new Error("Operation Cancelled");
+
+        // 2. Count Project Items
+        logInfo("Counting project items...");
+        const rootItem = await project.getRootItem();
+        scanProgress.total = await countProjectItems(rootItem);
+        if (isCancelled) throw new Error("Operation Cancelled");
+
+        scanProgress.processed = 0;
+        scanProgress.startTime = Date.now();
+        logInfo(`Found ${scanProgress.total} items in project.`);
+
+        // 3. Process & Relink
+        log("Starting relink process...");
+        await processProjectItems(rootItem);
+        if (isCancelled) throw new Error("Operation Cancelled");
+
+        log("------------------------------------------------");
+        logSuccess("Operation Complete!");
+
+        // Summary Logic
+        const relinkedCount = relinkedItems.filter(i => i.status === "Success").length;
+        const skippedCount = relinkedItems.filter(i => i.status.startsWith("Skipped")).length;
+        const missingCount = missingItems.length;
+
+        logInfo(`Summary:`);
+        logInfo(`  Relinked: ${relinkedCount}`);
+        logInfo(`  Skipped (Already OK): ${skippedCount}`);
+
+        if (missingCount > 0) {
+            logError(`  Missing / Not Found: ${missingCount}`);
+            if (missingCount === (scanProgress.processed - (relinkedItems.length))) {
+                // Heuristic: If almost everything is missing, warn user
+                logError("WARNING: Almost no clips were matched. You may have selected the wrong root folder.");
+            }
+            logWarning("Tip: Click 'Export Log' to see details of missing files.");
+        } else {
+            logSuccess("  All clips accounted for!");
+        }
+
+    } catch (e) {
+        if (e.message === "Operation Cancelled") {
+            logWarning("Operation stopped by user.");
+        } else {
+            logError(e.message);
+        }
+    } finally {
+        setButtonsState(false);
     }
-
-    const indexSuccess = await performFileIndexing();
-    if (!indexSuccess) return;
-
-    logInfo("Counting project items...");
-    const rootItem = await project.getRootItem();
-    scanProgress.total = await countProjectItems(rootItem);
-    scanProgress.processed = 0;
-    scanProgress.startTime = Date.now();
-    logInfo(`Found ${scanProgress.total} items in project.`);
-
-    log("Starting relink process...");
-    await processProjectItems(rootItem);
-    logSuccess("Operation Complete!");
 }
 
 document.addEventListener("DOMContentLoaded", () => {
     const runBtn = document.querySelector("#run-btn");
+    const stopBtn = document.querySelector("#stop-btn");
+    const exportBtn = document.querySelector("#export-btn");
     const clearBtn = document.querySelector("#clear-btn");
     const selectFolderBtn = document.querySelector("#select-folder-btn");
 
     if (selectFolderBtn) selectFolderBtn.addEventListener("click", selectFolder);
     if (runBtn) runBtn.addEventListener("click", run);
+    if (stopBtn) stopBtn.addEventListener("click", stopOperation);
+    if (exportBtn) exportBtn.addEventListener("click", exportResults);
     if (clearBtn) clearBtn.addEventListener("click", clearLog);
 
     log("Please select a folder to search for media.\n");
