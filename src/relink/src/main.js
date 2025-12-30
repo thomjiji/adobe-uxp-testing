@@ -15,7 +15,7 @@ const IGNORED_FOLDERS = [
 const MEDIA_EXTENSIONS = new Set([
     ".mov", ".mp4", ".m4v", ".mxf", ".avi", ".wav", ".mp3", ".aif", ".aiff", ".aac",
     ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".psd", ".mts", ".crm", ".r3d", ".braw",
-    ".arw", ".cr2", ".nef", ".dng", ".exr", ".svg", ".bmp", ".gif",
+    ".arw", ".cr2", ".nef", ".dng", ".exr", ".svg", ".bmp", ".gif", "mpg"
 ]);
 
 // Progress tracking
@@ -192,22 +192,21 @@ async function performFileIndexing() {
 // --------------------------------------------------------
 
 async function countProjectItems(folder) {
-    let count = 0;
-    const items = await folder.getItems();
+  let count = 0;
+  const items = await folder.getItems();
 
-    for (const item of items) {
-        await checkYield();
+  for (const item of items) {
+    await checkYield();
+    count++; // Count every item (bin or clip)
 
-        if (item.type === 2) {
-            const subFolder = ppro.FolderItem.cast(item);
-            if (subFolder) {
-                count += await countProjectItems(subFolder);
-            }
-        } else {
-            count++;
-        }
+    if (item.type === 2) { // Bin
+      const subFolder = ppro.FolderItem.cast(item);
+      if (subFolder) {
+        count += await countProjectItems(subFolder);
+      }
     }
-    return count;
+  }
+  return count;
 }
 
 async function processProjectItems(folder) {
