@@ -200,6 +200,34 @@ async function performFileIndexing() {
 // Project Scanning & Relinking
 // --------------------------------------------------------
 
+async function collectProjectExtensions(folder) {
+    const items = await folder.getItems();
+
+    for (const item of items) {
+        await checkYield();
+
+        if (item.type === 2) {
+            const subFolder = ppro.FolderItem.cast(item);
+            if (subFolder) {
+                await collectProjectExtensions(subFolder);
+            }
+        } else if (item.type === 1) {
+            const clipItem = ppro.ClipProjectItem.cast(item);
+            if (clipItem) {
+                // Get extension from name
+                const name = item.name;
+                const lastDot = name.lastIndexOf('.');
+                if (lastDot !== -1) {
+                    const ext = name.substring(lastDot).toLowerCase();
+                    if (ext.length > 1 && ext.length < 10 && !MEDIA_EXTENSIONS.has(ext)) {
+                        MEDIA_EXTENSIONS.add(ext);
+                    }
+                }
+            }
+        }
+    }
+}
+
 async function countProjectItems(folder) {
     let count = 0;
     const items = await folder.getItems();
@@ -236,7 +264,18 @@ async function processProjectItems(folder) {
             if (clipItem) {
                 const isSeq = await clipItem.isSequence();
                 if (!isSeq) {
-                    await tryRelinkClip(clipItem, item.name);
+                    // ONLY RELINK IF OFFLINE
+                    const isOffline = await clipItem.isOffline();
+                    if (isOffline) {
+                        await tryRelinkClip(clipItem, item.name);
+                    } else {
+                        relinkedItems.push({
+                            name: item.name,
+                            oldPath: "",
+                            newPath: "",
+                            status: "Skipped (Online)"
+                        });
+                    }
                 }
             }
         }
@@ -406,13 +445,19 @@ async function run() {
         if (!project) throw new Error("No active project");
         if (!searchRootEntry) throw new Error("Please select a search folder first.");
 
+        const rootItem = await project.getRootItem();
+
+        // 0. Analyze project for extensions
+        logInfo("Analyzing project for media extensions...");
+        await collectProjectExtensions(rootItem);
+        if (isCancelled) throw new Error("Operation Cancelled");
+
         // 1. Index Files
         const indexSuccess = await performFileIndexing();
         if (!indexSuccess || isCancelled) throw new Error("Operation Cancelled");
 
         // 2. Count Project Items
         logInfo("Counting project items...");
-        const rootItem = await project.getRootItem();
         scanProgress.total = await countProjectItems(rootItem);
         if (isCancelled) throw new Error("Operation Cancelled");
 
@@ -435,12 +480,12 @@ async function run() {
 
         logInfo(`Summary:`);
         logInfo(`  Relinked: ${relinkedCount}`);
-        logInfo(`  Skipped (Already OK): ${skippedCount}`);
-
+        logInfo(`  Skipped (Online/Already OK): ${skippedCount}`);
+p
         if (missingCount > 0) {
             logError(`  Missing / Not Found: ${missingCount}`);
-            if (missingCount === (scanProgress.processed - (relinkedItems.length))) {
-                // Heuristic: If almost everything is missing, warn user
+            if (missingCount === (scanProgress.processed - skippedCount - relinkedCount)) {
+                // Heuristic: If everything that wasn't skipped is missing
                 logError("WARNING: Almost no clips were matched. You may have selected the wrong root folder.");
             }
             logWarning("Tip: Click 'Export Log' to see details of missing files.");
