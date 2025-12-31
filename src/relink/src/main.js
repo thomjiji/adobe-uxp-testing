@@ -15,6 +15,7 @@ const IGNORED_FOLDERS = [
     ".DS_Store",
     "System Volume Information",
     "$RECYCLE.BIN",
+    "_gsdata_",
 ];
 const MEDIA_EXTENSIONS = new Set([
     ".mov",
@@ -46,6 +47,7 @@ const MEDIA_EXTENSIONS = new Set([
     ".bmp",
     ".gif",
     ".mpg",
+    ".mts",
 ]);
 
 // Progress tracking
