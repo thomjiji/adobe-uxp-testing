@@ -18,36 +18,9 @@ const IGNORED_FOLDERS = [
     "_gsdata_",
 ];
 const MEDIA_EXTENSIONS = new Set([
-    ".mov",
-    ".mp4",
-    ".m4v",
-    ".mxf",
-    ".avi",
-    ".wav",
-    ".mp3",
-    ".aif",
-    ".aiff",
-    ".aac",
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".tiff",
-    ".tif",
-    ".psd",
-    ".mts",
-    ".crm",
-    ".r3d",
-    ".braw",
-    ".arw",
-    ".cr2",
-    ".nef",
-    ".dng",
-    ".exr",
-    ".svg",
-    ".bmp",
-    ".gif",
-    ".mpg",
-    ".mts",
+    ".mov", ".mp4", ".m4v", ".mxf", ".avi", ".wav", ".mp3", ".aif", ".aiff", ".aac",
+    ".png", ".jpg", ".jpeg", ".tiff", ".tif", ".psd", ".mts", ".crm", ".r3d", ".braw",
+    ".arw", ".cr2", ".nef", ".dng", ".exr", ".svg", ".bmp", ".gif", ".mpg"
 ]);
 
 // Progress tracking
@@ -65,13 +38,16 @@ const YIELD_MS = 30; // Work for 30ms before yielding
 const UPDATE_MS = 100; // Update UI max every 100ms
 let successCount = 0; // Track successful relinks for throttling
 
+// Tracking unique items
+let countedItemIds = new Set();
+let processedItemIds = new Set();
+
 // Buffer log messages
 let logBuffer = [];
 let logFlushTimer = null;
-const MAX_LOG_LINES = 100; // Keep only the last 100 lines in the UI
+const MAX_LOG_LINES = 100; // Keep only the last 100 lines
 
 const log = (msg, color) => {
-    // Use divs for easier DOM manipulation
     const logEntry = color
         ? `<div style='color:${color}'>${msg}</div>`
         : `<div>${msg}</div>`;
@@ -82,10 +58,8 @@ const log = (msg, color) => {
     logFlushTimer = setTimeout(() => {
         const body = document.getElementById("plugin-body");
         if (body && logBuffer.length > 0) {
-            // 1. Append new messages efficiently
-            body.insertAdjacentHTML("beforeend", logBuffer.join(""));
+            body.insertAdjacentHTML('beforeend', logBuffer.join(''));
 
-            // 2. Prune old messages to keep DOM light
             while (body.childElementCount > MAX_LOG_LINES) {
                 body.removeChild(body.firstElementChild);
             }
@@ -122,12 +96,7 @@ async function checkYield() {
     }
 }
 
-function updateProgress(
-    processed,
-    total,
-    currentItem,
-    statusPrefix = "Processing",
-) {
+function updateProgress(processed, total, currentItem, statusPrefix = "Processing") {
     const now = Date.now();
     if (now - lastProgressUpdate < UPDATE_MS && processed < total) return;
     lastProgressUpdate = now;
@@ -136,22 +105,22 @@ function updateProgress(
     if (progressEl) {
         if (total > 0) {
             const percent = Math.round((processed / total) * 100);
-            const remaining = scanProgress.startTime
-                ? Math.round(
-                      (((Date.now() - scanProgress.startTime) / processed) *
-                          (total - processed)) /
-                          1000,
-                  )
-                : 0;
+
+            let remaining = 0;
+            if (processed > 0 && scanProgress.startTime) {
+                const elapsed = now - scanProgress.startTime;
+                const rate = elapsed / processed;
+                remaining = Math.max(0, Math.round((total - processed) * rate / 1000));
+            }
 
             progressEl.innerHTML = `<span style="color: #00ff00;">
-                ${statusPrefix}: ${processed}/${total} (${percent}%)
+                ${statusPrefix}: ${processed}/${total} (${percent}%)<br/>
                 <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${currentItem}</div>
                 Est. time remaining: ${remaining}s
                 </span>`;
         } else {
             progressEl.innerHTML = `<span style="color: #00ff00;">
-                ${statusPrefix}: ${processed}
+                ${statusPrefix}: ${processed}<br/>
                 <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${currentItem}</div>
                 </span>`;
         }
@@ -197,10 +166,7 @@ async function indexFolder(folderEntry) {
         for (const entry of entries) {
             await checkYield();
 
-            if (
-                entry.name.startsWith(".") ||
-                IGNORED_FOLDERS.includes(entry.name)
-            ) {
+            if (entry.name.startsWith(".") || IGNORED_FOLDERS.includes(entry.name)) {
                 continue;
             }
 
@@ -210,21 +176,12 @@ async function indexFolder(folderEntry) {
                     logInfo(`Skipping folder ${entry.name}: ${err.message}`);
                 });
             } else if (entry.isFile) {
-                // TARGETED INDEXING: Only store if project actually needs this filename
-                // This is the key optimization for memory reduction
                 if (targetFileNames.has(entry.name)) {
-                    // Only increment progress if this is the first time we found this file
                     if (!fileIndex.has(entry.name)) {
                         scanProgress.processed++;
                     }
-
                     fileIndex.set(entry.name, entry.nativePath);
-                    updateProgress(
-                        scanProgress.processed,
-                        targetFileNames.size,
-                        `Match found: ${entry.name}`,
-                        "Indexing",
-                    );
+                    updateProgress(scanProgress.processed, targetFileNames.size, `Match found: ${entry.name}`, "Indexing");
                 }
             }
         }
@@ -238,14 +195,11 @@ async function performFileIndexing() {
 
     fileIndex.clear();
     scanProgress.processed = 0;
-    // The "total" is now the number of offline files we are searching for
     scanProgress.total = targetFileNames.size;
     scanProgress.startTime = Date.now();
     lastYieldTime = Date.now();
 
-    logInfo(
-        `Searching for ${targetFileNames.size} missing files in: ${searchRootEntry.nativePath}...`,
-    );
+    logInfo(`Searching for ${targetFileNames.size} missing files in: ${searchRootEntry.nativePath}...`);
 
     try {
         await indexFolder(searchRootEntry);
@@ -270,34 +224,32 @@ async function analyzeProject(folder) {
 
     for (const item of items) {
         await checkYield();
-        scanProgress.total++; // Count for Phase 3 progress bar
 
-        if (item.type === 2) {
-            const subFolder = ppro.FolderItem.cast(item);
-            if (subFolder) {
-                await analyzeProject(subFolder);
-            }
-        } else if (item.type === 1) {
-            const clipItem = ppro.ClipProjectItem.cast(item);
-            if (clipItem) {
-                const isSeq = await clipItem.isSequence();
-                if (!isSeq) {
-                    const isOffline = await clipItem.isOffline();
-                    if (isOffline) {
-                        // 1. Add to target set for indexing filter
-                        targetFileNames.add(item.name);
+        const id = item.getId();
+        if (!countedItemIds.has(id)) {
+            countedItemIds.add(id);
+            scanProgress.total++; // For Phase 3
 
-                        // 2. Discover extension for filtering
-                        const name = item.name;
-                        const lastDot = name.lastIndexOf(".");
-                        if (lastDot !== -1) {
-                            const ext = name.substring(lastDot).toLowerCase();
-                            if (
-                                ext.length > 1 &&
-                                ext.length < 10 &&
-                                !MEDIA_EXTENSIONS.has(ext)
-                            ) {
-                                MEDIA_EXTENSIONS.add(ext);
+            if (item.type === 2) {
+                const subFolder = ppro.FolderItem.cast(item);
+                if (subFolder) {
+                    await analyzeProject(subFolder);
+                }
+            } else if (item.type === 1) {
+                const clipItem = ppro.ClipProjectItem.cast(item);
+                if (clipItem) {
+                    const isSeq = await clipItem.isSequence();
+                    if (!isSeq) {
+                        const isOffline = await clipItem.isOffline();
+                        if (isOffline) {
+                            targetFileNames.add(item.name);
+                            const name = item.name;
+                            const lastDot = name.lastIndexOf('.');
+                            if (lastDot !== -1) {
+                                const ext = name.substring(lastDot).toLowerCase();
+                                if (ext.length > 1 && ext.length < 10 && !MEDIA_EXTENSIONS.has(ext)) {
+                                    MEDIA_EXTENSIONS.add(ext);
+                                }
                             }
                         }
                     }
@@ -311,13 +263,12 @@ async function processProjectItems(folder) {
     const items = await folder.getItems();
 
     for (const item of items) {
+        const id = item.getId();
+        if (processedItemIds.has(id)) continue;
+        processedItemIds.add(id);
+
         scanProgress.processed++;
-        updateProgress(
-            scanProgress.processed,
-            scanProgress.total,
-            item.name,
-            "Relinking",
-        );
+        updateProgress(scanProgress.processed, scanProgress.total, item.name, "Relinking");
         await checkYield();
 
         if (item.type === 2) {
@@ -330,23 +281,18 @@ async function processProjectItems(folder) {
             if (clipItem) {
                 const isSeq = await clipItem.isSequence();
                 if (!isSeq) {
-                    // Only process clips we know are offline (since we only indexed targets)
                     const isOffline = await clipItem.isOffline();
-
                     if (isOffline) {
                         await tryRelinkClip(clipItem, item.name);
-
-                        // COOL DOWN THROTTLING
-                        // Prevent UI freeze by pausing after bursts of write operations
                         if (successCount > 0 && successCount % 10 === 0) {
-                            await yieldToUI(50);
+                             await yieldToUI(50);
                         }
                     } else {
                         relinkedItems.push({
                             name: item.name,
                             oldPath: "",
                             newPath: "",
-                            status: "Skipped (Online)",
+                            status: "Skipped (Online)"
                         });
                     }
                 }
@@ -362,7 +308,6 @@ async function tryRelinkClip(clipItem, clipName) {
     try {
         currentPath = await clipItem.getMediaFilePath();
     } catch (e) {
-        // Can happen if item is special or synthetic
     }
 
     if (newPath) {
@@ -377,9 +322,8 @@ async function tryRelinkClip(clipItem, clipName) {
                         name: clipName,
                         oldPath: currentPath,
                         newPath: newPath,
-                        status: "Success",
+                        status: "Success"
                     });
-                    // Yield after write
                     await yieldToUI();
                 } else {
                     logError(`  Failed to change path: ${clipName}`);
@@ -387,7 +331,7 @@ async function tryRelinkClip(clipItem, clipName) {
                         name: clipName,
                         oldPath: currentPath,
                         newPath: newPath,
-                        status: "Failed (API Error)",
+                        status: "Failed (API Error)"
                     });
                 }
             } catch (e) {
@@ -396,7 +340,7 @@ async function tryRelinkClip(clipItem, clipName) {
                     name: clipName,
                     oldPath: currentPath,
                     newPath: newPath,
-                    status: `Error: ${e.message}`,
+                    status: `Error: ${e.message}`
                 });
             }
         } else {
@@ -404,21 +348,17 @@ async function tryRelinkClip(clipItem, clipName) {
                 name: clipName,
                 oldPath: currentPath,
                 newPath: newPath,
-                status: "Skipped (Already Linked)",
+                status: "Skipped (Already Linked)"
             });
         }
     } else {
         logWarning(`Not found in search folder: ${clipName}`);
         missingItems.push({
             name: clipName,
-            currentPath: currentPath,
+            currentPath: currentPath
         });
     }
 }
-
-// --------------------------------------------------------
-// Export Functionality
-// --------------------------------------------------------
 
 function getFormattedTimestamp() {
     const now = new Date();
@@ -444,26 +384,15 @@ async function exportResults() {
             types: ["csv", "txt"],
         });
 
-        if (!file) {
-            logInfo("Export cancelled");
-            return;
-        }
+        if (!file) return;
 
         let content = "Name,Status,Old Path,New Path\n";
-
-        content += relinkedItems
-            .map(
-                (item) =>
-                    `"${item.name}","${item.status}","${item.oldPath}","${item.newPath}"`,
-            )
-            .join("\n");
-
-        content += missingItems
-            .map(
-                (item) =>
-                    `"${item.name}","Missing in Search Folder","${item.currentPath}",""`,
-            )
-            .join("\n");
+        content += relinkedItems.map(item =>
+            `"${item.name}","${item.status}","${item.oldPath}","${item.newPath}"`
+        ).join("\n");
+        content += "\n" + missingItems.map(item =>
+            `"${item.name}","Missing in Search Folder","${item.currentPath}",""`
+        ).join("\n");
 
         await file.write(content);
         logSuccess(`Log saved to: ${file.nativePath}`);
@@ -471,10 +400,6 @@ async function exportResults() {
         logError(`Error saving log: ${e.message}`);
     }
 }
-
-// --------------------------------------------------------
-// Main Execution
-// --------------------------------------------------------
 
 function setButtonsState(isRunning) {
     const runBtn = document.getElementById("run-btn");
@@ -498,11 +423,8 @@ async function selectFolder() {
         const folders = await localFileSystem.getFolder();
         if (folders) {
             searchRootEntry = folders;
-            const pathDisplay = document.getElementById(
-                "selected-path-display",
-            );
-            if (pathDisplay)
-                pathDisplay.textContent = searchRootEntry.nativePath;
+            const pathDisplay = document.getElementById("selected-path-display");
+            if (pathDisplay) pathDisplay.textContent = searchRootEntry.nativePath;
             const runBtn = document.getElementById("run-btn");
             if (runBtn) runBtn.removeAttribute("disabled");
             logInfo(`Selected search folder: ${searchRootEntry.nativePath}`);
@@ -517,24 +439,23 @@ async function run() {
     missingItems = [];
     relinkedItems = [];
     targetFileNames.clear();
+    countedItemIds.clear();
+    processedItemIds.clear();
     isCancelled = false;
     successCount = 0;
     setButtonsState(true);
-    let projectItemCount = 0; // Store total items for final phase
 
     try {
         const project = await getActiveProjectSafe();
         if (!project) throw new Error("No active project");
-        if (!searchRootEntry)
-            throw new Error("Please select a search folder first.");
+        if (!searchRootEntry) throw new Error("Please select a search folder first.");
 
         const rootItem = await project.getRootItem();
 
-        // 0. Analyze project for offline clips and extensions
         logInfo("Analyzing project for offline clips...");
-        scanProgress.total = 0; // Initialize for Phase 0 tracking (optional visualization)
+        scanProgress.total = 0;
         await analyzeProject(rootItem);
-        projectItemCount = scanProgress.total; // Save the count!
+        const projectItemCount = scanProgress.total;
 
         if (isCancelled) throw new Error("Operation Cancelled");
 
@@ -543,15 +464,11 @@ async function run() {
             return;
         }
 
-        // 1. Index Files (Targeted)
-        // This overwrites scanProgress.total with targetFileNames.size for this phase
         const indexSuccess = await performFileIndexing();
-        if (!indexSuccess || isCancelled)
-            throw new Error("Operation Cancelled");
+        if (!indexSuccess || isCancelled) throw new Error("Operation Cancelled");
 
-        // 3. Process & Relink
         scanProgress.processed = 0;
-        scanProgress.total = projectItemCount; // RESTORE correct total
+        scanProgress.total = projectItemCount;
         scanProgress.startTime = Date.now();
         logInfo(`Processing ${scanProgress.total} items...`);
 
@@ -562,13 +479,8 @@ async function run() {
         log("------------------------------------------------");
         logSuccess("Operation Complete!");
 
-        // Summary Logic
-        const relinkedCount = relinkedItems.filter(
-            (i) => i.status === "Success",
-        ).length;
-        const skippedCount = relinkedItems.filter((i) =>
-            i.status.startsWith("Skipped"),
-        ).length;
+        const relinkedCount = relinkedItems.filter(i => i.status === "Success").length;
+        const skippedCount = relinkedItems.filter(i => i.status.startsWith("Skipped")).length;
         const missingCount = missingItems.length;
 
         logInfo(`Summary:`);
@@ -578,16 +490,13 @@ async function run() {
         if (missingCount > 0) {
             logError(`  Missing / Not Found: ${missingCount}`);
             if (missingCount === targetFileNames.size) {
-                logError(
-                    "WARNING: Zero matches found. You may have selected the wrong root folder.",
-                );
+                logError("WARNING: Zero matches found. You may have selected the wrong root folder.");
             }
-            logWarning(
-                "Tip: Click 'Export Log' to see details of missing files.",
-            );
+            logWarning("Tip: Click 'Export Log' to see details of missing files.");
         } else {
             logSuccess("  All offline clips relinked successfully!");
         }
+
     } catch (e) {
         if (e.message === "Operation Cancelled") {
             logWarning("Operation stopped by user.");
@@ -596,9 +505,10 @@ async function run() {
         }
     } finally {
         setButtonsState(false);
-        // Clean up memory
         targetFileNames.clear();
         fileIndex.clear();
+        countedItemIds.clear();
+        processedItemIds.clear();
     }
 }
 
@@ -609,8 +519,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearBtn = document.querySelector("#clear-btn");
     const selectFolderBtn = document.querySelector("#select-folder-btn");
 
-    if (selectFolderBtn)
-        selectFolderBtn.addEventListener("click", selectFolder);
+    if (selectFolderBtn) selectFolderBtn.addEventListener("click", selectFolder);
     if (runBtn) runBtn.addEventListener("click", run);
     if (stopBtn) stopBtn.addEventListener("click", stopOperation);
     if (exportBtn) exportBtn.addEventListener("click", exportResults);
