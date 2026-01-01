@@ -13,24 +13,41 @@ let scanProgress = {
   startTime: null
 };
 
-// Buffer log messages to reduce DOM manipulation
+// Responsiveness control
+let lastYieldTime = 0;
+let lastProgressUpdate = 0;
+const YIELD_MS = 30; // Work for 30ms before yielding
+const UPDATE_MS = 100; // Update UI max every 100ms
+
+// Tracking unique items
+let countedItemIds = new Set();
+let processedItemIds = new Set();
+
+// Buffer log messages
 let logBuffer = [];
 let logFlushTimer = null;
+const MAX_LOG_LINES = 100; // Keep only the last 100 lines
 
 const log = (msg, color) => {
   const logEntry = color
-    ? `<span style='color:${color}'>${msg}</span><br />`
-    : `${msg}<br />`;
+    ? `<div style='color:${color}'>${msg}</div>`
+    : `<div>${msg}</div>`;
 
   logBuffer.push(logEntry);
 
-  // Debounce DOM updates to every 100ms
   if (logFlushTimer) clearTimeout(logFlushTimer);
   logFlushTimer = setTimeout(() => {
     const body = document.getElementById("plugin-body");
     if (body && logBuffer.length > 0) {
-      body.innerHTML += logBuffer.join('');
+      body.insertAdjacentHTML('beforeend', logBuffer.join(''));
+
+      // Prune old messages
+      while (body.childElementCount > MAX_LOG_LINES) {
+        body.removeChild(body.firstElementChild);
+      }
+
       logBuffer = [];
+      body.scrollTop = body.scrollHeight;
     }
   }, 100);
 };
@@ -48,22 +65,40 @@ const logWarning = (msg) => log(`> ${msg}`, "#ffaa00");
 const logInfo = (msg) => log(`> ${msg}`, "#aaaaaa");
 
 // Yield control to UI thread to prevent freezing
-function yieldToUI() {
-  return new Promise(resolve => setTimeout(resolve, 0));
+function yieldToUI(ms = 0) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Check if we should yield to UI based on time
+async function checkYield() {
+    const now = Date.now();
+    if (now - lastYieldTime > YIELD_MS) {
+        await yieldToUI();
+        lastYieldTime = Date.now();
+    }
 }
 
 // Update progress text counter
 function updateProgress(processed, total, currentItem) {
+  const now = Date.now();
+  if (now - lastProgressUpdate < UPDATE_MS && processed < total) return;
+  lastProgressUpdate = now;
+
   const progressEl = document.getElementById('progress-text');
   if (progressEl && total > 0) {
     const percent = Math.round((processed / total) * 100);
-    const elapsed = Date.now() - scanProgress.startTime;
-    const rate = processed > 0 ? elapsed / processed : 0;
-    const remaining = rate > 0 ? Math.round((total - processed) * rate / 1000) : 0;
+
+    let remaining = 0;
+    if (processed > 0 && scanProgress.startTime) {
+        const elapsed = now - scanProgress.startTime;
+        const rate = elapsed / processed;
+        remaining = Math.max(0, Math.round((total - processed) * rate / 1000));
+    }
 
     progressEl.innerHTML = `<span style="color: #00ff00;">
-      Scanning: ${processed}/${total} (${percent}%) - ${currentItem}<br/>
-      Estimated time remaining: ${remaining}s
+      Scanning: ${processed}/${total} (${percent}%)<br/>
+      <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;">${currentItem}</div>
+      Est. time remaining: ${remaining}s
     </span>`;
   }
 }
@@ -116,14 +151,19 @@ async function countItems(folder) {
   const items = await folder.getItems();
 
   for (const item of items) {
-    if (item.type === 2) {
-      // Recursively count items in bins
-      const subFolder = ppro.FolderItem.cast(item);
-      if (subFolder) {
-        count += await countItems(subFolder);
-      }
-    } else {
-      count++; // Count clips
+    await checkYield();
+
+    const id = item.getId();
+    if (!countedItemIds.has(id)) {
+        countedItemIds.add(id);
+        count++; // Count unique item
+
+        if (item.type === 2) {
+          const subFolder = ppro.FolderItem.cast(item);
+          if (subFolder) {
+            count += await countItems(subFolder);
+          }
+        }
     }
   }
 
@@ -136,25 +176,27 @@ function isUnwantedItem(name) {
 }
 
 /**
- * Recursively scans a bin and plans actions for flattening, removing unwanted files, 
- * and cleaning up empty bins. 
- * 
+ * Recursively scans a bin and plans actions for flattening, removing unwanted files,
+ * and cleaning up empty bins.
+ *
  * Returns: { actions: [], isEmpty: boolean }
  */
 async function scanAndPlan(currentBin, targetBin, depth, options, batchSize = 10) {
   const allActions = [];
   let remainingItemCount = 0;
-  
+
   const items = await currentBin.getItems();
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
 
+    const id = item.getId();
+    if (processedItemIds.has(id)) continue;
+    processedItemIds.add(id);
+
     // Yield to UI periodically
-    if (i > 0 && i % batchSize === 0) {
-      await yieldToUI();
-    }
-    
+    await checkYield();
+
     // Update global progress
     scanProgress.processed++;
     updateProgress(scanProgress.processed, scanProgress.total, item.name);
@@ -173,13 +215,10 @@ async function scanAndPlan(currentBin, targetBin, depth, options, batchSize = 10
           const removeAction = currentBin.createRemoveItemAction(item);
           if (removeAction) {
             allActions.push(removeAction);
-            // Don't increment remainingItemCount
           } else {
-            // Failed to create action? Treat as remaining to be safe
              remainingItemCount++;
           }
         } else {
-          // Subfolder still has content
           remainingItemCount++;
         }
       }
@@ -198,7 +237,6 @@ async function scanAndPlan(currentBin, targetBin, depth, options, batchSize = 10
       }
 
       // Check 2: Flattening (Move deep clips)
-      // Only if not already removed
       if (!actionCreated && item.type === 1 && depth >= FLATTEN_DEPTH_THRESHOLD) {
         const clipItem = ppro.ClipProjectItem.cast(item);
         if (clipItem) {
@@ -214,7 +252,6 @@ async function scanAndPlan(currentBin, targetBin, depth, options, batchSize = 10
         }
       }
 
-      // If no action was taken on this item, it stays here
       if (!actionCreated) {
         remainingItemCount++;
       }
@@ -231,6 +268,9 @@ async function run(options = { removeUnwanted: false }) {
   try {
     clearLog();
     clearProgress();
+    countedItemIds.clear();
+    processedItemIds.clear();
+
     log(`Starting folder flatten operation${options.removeUnwanted ? ' with cleanup' : ''}...`);
 
     const project = await getActiveProjectSafe();
@@ -261,12 +301,10 @@ async function run(options = { removeUnwanted: false }) {
       return;
     }
 
-    // Filter nested selections (don't process a bin if its parent is also selected)
+    // Filter nested selections
     const finalBins = [];
     for (let i = 0; i < selectedBins.length; i++) {
       let isChild = false;
-      const binId = selectedBins[i].item.getId();
-
       for (let j = 0; j < selectedBins.length; j++) {
         if (i !== j) {
           const potentialParent = selectedBins[j].bin;
@@ -277,7 +315,6 @@ async function run(options = { removeUnwanted: false }) {
           }
         }
       }
-
       if (!isChild) {
         finalBins.push(selectedBins[i]);
       }
@@ -290,15 +327,22 @@ async function run(options = { removeUnwanted: false }) {
 
     logSuccess(`Processing ${finalBins.length} bin(s)...`);
     log("───────────────────────────────────");
-    
+
     // 1. Count items for progress tracking
     log("Counting items...");
     scanProgress.total = 0;
     scanProgress.processed = 0;
     scanProgress.startTime = Date.now();
-    
+    lastYieldTime = Date.now();
+
     for (const binData of finalBins) {
-        scanProgress.total += await countItems(binData.bin);
+        // Count bin itself
+        const id = binData.item.getId();
+        if (!countedItemIds.has(id)) {
+            countedItemIds.add(id);
+            scanProgress.total++;
+            scanProgress.total += await countItems(binData.bin);
+        }
     }
     log(`Found ${scanProgress.total} items to scan`);
 
@@ -308,14 +352,17 @@ async function run(options = { removeUnwanted: false }) {
 
     for (const binData of finalBins) {
       log(`Scanning bin: ${binData.item.name}`);
-      // Start recursion at depth 0
-      // We process the children of the selected bin.
-      // The selected bin itself is the 'targetBin' for moves.
-      const result = await scanAndPlan(binData.bin, binData.bin, 0, options);
-      allPlannedActions.push(...result.actions);
+
+      const id = binData.item.getId();
+      if (!processedItemIds.has(id)) {
+          processedItemIds.add(id);
+          scanProgress.processed++;
+          updateProgress(scanProgress.processed, scanProgress.total, binData.item.name);
+
+          const result = await scanAndPlan(binData.bin, binData.bin, 0, options);
+          allPlannedActions.push(...result.actions);
+      }
     }
-    
-    // clearProgress(); // Keep progress persistent
 
     log("\n───────────────────────────────────");
 
@@ -338,7 +385,7 @@ async function run(options = { removeUnwanted: false }) {
 
     logSuccess(`\nSuccessfully executed ${executedCount} operations.`);
     logSuccess(`Operation complete!`);
-    
+
   } catch (error) {
     clearProgress();
     logError(`Error: ${error.message}`);
