@@ -471,6 +471,7 @@ async function run() {
         scanProgress.total = projectItemCount;
         scanProgress.startTime = Date.now();
         logInfo(`Processing ${scanProgress.total} items...`);
+        
 
         log("Starting relink process...");
         await processProjectItems(rootItem);
